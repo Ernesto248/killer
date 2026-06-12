@@ -118,10 +118,10 @@ export function RemeserosTable({ rows }: { rows: RemeseroRow[] }) {
                       <td className="px-4 py-3 font-medium max-w-[180px] truncate">
                         <Link href={`/remeseros/${r.id}`} className="hover:underline">{r.name}</Link>
                       </td>
-                      <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", isDeuda ? "text-red-600" : isFondo ? "text-green-600" : cup > 0 ? "text-green-600" : cup < 0 ? "text-red-600" : "text-muted-foreground")}>
+                      <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", isDeuda ? "text-red-600" : isFondo ? "text-green-600" : cup > 0 ? "text-red-600" : cup < 0 ? "text-green-600" : "text-muted-foreground")}>
                         {cup.toLocaleString()}
                       </td>
-                      <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", usd > 0 ? "text-green-600" : usd < 0 ? "text-red-600" : "text-muted-foreground")}>
+                      <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", usd > 0 ? "text-red-600" : usd < 0 ? "text-green-600" : "text-muted-foreground")}>
                         {usd.toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">

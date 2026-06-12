@@ -9,12 +9,7 @@ export type ParsedCuadre = {
 };
 
 function parseAmount(raw: string): number {
-  return Number(raw.replace(/[$.*\s`]/g, "").replace(/,/g, "").replace(".", "").replace(/(\d)\.(\d{3})/g, "$1$2")) || 0;
-}
-
-function parseAmountFlex(raw: string): number {
-  const cleaned = raw.replace(/[$*\s`]/g, "").replace(/,/g, "");
-  return Number(cleaned) || 0;
+  return Number(raw.replace(/[$*.,\s`]/g, "")) || 0;
 }
 
 function sanitize(text: string): string {
@@ -46,49 +41,34 @@ function findSection(text: string, markers: string[], untilMarkers: string[]): s
 export function parseCuadre(text: string): ParsedCuadre {
   const t = sanitize(text);
 
-  // Tirado: between 🆃🅸🆁🅰🅳🅞 and 🅵🅸🅽🅰
-  const tiradoSection = findSection(t, ["🆃🅸🆁🅰🅳🅞"], ["🚩 🅵🅸🅽🅐", "🚩 🅵🅸🅽🅐"]);
-
-  // Inicial: between 🅸🅽🅸🅲🅸🅞 and 🪎
-  const inicialSection = findSection(t, ["🅸🅽🅸🅲🅸🅞 📖", "🅸🅽🅸🅲🅸🅞"], ["🪎", "📖"]);
-
-  // Pagado: between 🅟🅐🅖🅐🅳🅞 and 📌
+  const tiradoSection = findSection(t, ["🆃🅸🆁🅐🅳🅞"], ["🚩 🅵🅸🅽🅐", "🚩 🅵🅸🅽🅐🅛"]);
+  const inicialSection = findSection(t, ["🅸🅽🅸🅲🅸🅞 📖", "🅸🅽🅸🅲🅸🅞"], ["🪎"]);
   const pagadoSection = findSection(t, ["🅟🅐🅖🅐🅳🅞"], ["📌", "🅟🅴🅽"]);
 
-  // Pendientes: between 🅟🅴🅽🅳🅸🅴🅽🆃🅴🆂 and 🇺🇲
-  const pendientesSection = findSection(t, ["🅟🅴🅽🅳🅸🅴🅽🆃🅴🆂"], ["🇺🇲"]);
-
-  // Final: between 🅵🅸🅽🅐🅛 and @
   const finalSection = findSection(t, ["🅵🅸🅽🅐🅛 📕", "🅵🅸🅽🅐🅛"], ["@"]);
 
-  // Parse amounts
-  const inicialMatch = inicialSection.match(/([\d.,]+)\s*`?(deuda|fondo)`?/i);
-  const finalMatch = finalSection.match(/([\d.,]+)\s*`?(deuda|fondo)`?/i);
+  const inicialNums = [...inicialSection.matchAll(/[\d.,]+/g)].map((m) => parseAmount(m[0]));
+  const finalNums = [...finalSection.matchAll(/[\d.,]+/g)].map((m) => parseAmount(m[0]));
+  const finalLabel = (/deuda|fondo/i).exec(finalSection)?.[0]?.toLowerCase() as "deuda" | "fondo" | undefined;
 
-  const pagadoAmounts = [...pagadoSection.matchAll(/\$\s*([\d.,]+)/g)].map((m) => parseAmountFlex(m[1]));
+  const pagadoAmounts = [...pagadoSection.matchAll(/\$\s*([\d.,]+)/g)].map((m) => parseAmount(m[1]));
   const pagadoCup = pagadoAmounts.reduce((a, b) => a + b, 0);
 
-  const pendientesMatch = pendientesSection.match(/([\d.,]+)\s*×\s*([\d.,]+)/);
-  const pendientes = pendientesMatch
-    ? { usd: parseAmountFlex(pendientesMatch[1]), tasa: parseAmountFlex(pendientesMatch[2]) }
-    : { usd: 0, tasa: 0 };
-
   const tiradoItems = [...tiradoSection.matchAll(/([\d.,]+)\s*×\s*(\d+)/g)].map((m) => ({
-    usd: parseAmountFlex(m[1]),
-    tasa: parseAmountFlex(m[2]),
+    usd: parseAmount(m[1]),
+    tasa: parseAmount(m[2]),
   }));
 
-  // Remesero: everything after @ until end or ```
   const remeseroMatch = t.match(/@\s*([^\n`]+?)(?:\s*```|$)/);
   const remesero = remeseroMatch ? remeseroMatch[1].trim() : null;
 
   return {
     remesero,
-    balanceInicialCup: inicialMatch ? parseAmountFlex(inicialMatch[1]) : null,
+    balanceInicialCup: inicialNums.length > 0 ? inicialNums[0] : null,
     pagadoCup,
-    pendientes,
+    pendientes: { usd: 0, tasa: 0 },
     tirado: tiradoItems,
-    balanceFinalCup: finalMatch ? parseAmountFlex(finalMatch[1]) : null,
-    balanceFinalLabel: finalMatch ? (finalMatch[2].toLowerCase() as "deuda" | "fondo") : null,
+    balanceFinalCup: finalNums.length > 0 ? finalNums[0] : null,
+    balanceFinalLabel: finalLabel ?? null,
   };
 }

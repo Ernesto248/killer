@@ -31,9 +31,6 @@ export function CuadreTab({ remeseros }: { remeseros: Array<{ id: number; name: 
       const p = parseCuadre(v);
       setParsed(p);
       setTirado(p.tirado);
-      if (p.remesero && !selectedRemesero) {
-        setSelectedRemesero(p.remesero);
-      }
     }
   };
 

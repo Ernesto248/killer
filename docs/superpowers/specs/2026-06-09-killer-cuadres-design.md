@@ -19,7 +19,7 @@ Web app responsive para reemplazar el flujo actual de José (WhatsApp + Excel) e
 | 1 | Tipo de app | Web responsive (sin PWA, sin nativo) |
 | 2 | Usuarios | Un solo usuario (José), sin login |
 | 3 | Captura de cuadre | Pegar texto de WhatsApp + parseo automático con editor de fallback |
-| 4 | Persistencia | Postgres gestionado (Neon) |
+| 4 | Persistencia | PostgreSQL en Neon (único entorno; dev = prod) |
 | 5 | Deploy | Vercel + Neon |
 | 6 | Cálculo de ganancia wire | FIFO: tasa ponderada de los USD consumidos en tiradas |
 | 7 | Alta de contrapartes | Libre (autocompletar al pegar cuadre) |
@@ -396,14 +396,14 @@ Visualización: campanita con badge en header. Pantalla `/alertas` con soft dism
 | UI datos | shadcn/ui (Table, DataTable, Form, DatePicker, Command, Dialog) |
 | Formularios | React Hook Form + Zod |
 | ORM | Drizzle ORM |
-| DB | PostgreSQL (Neon free tier) |
+| DB | PostgreSQL (Neon — único entorno, dev = prod) |
 | Migraciones | Drizzle Kit |
 | Auth | Ninguno (1 usuario) |
 | Hosting | Vercel |
 | Gráficos | Recharts |
 | Fechas | date-fns |
-| Tests | Vitest + Testing Library + Playwright |
-| CI | GitHub Actions |
+| Tests | Scripts de validación con `tsx` (Vitest pendiente de resolver instalación) |
+| CI | GitHub Actions (cuando se habilite) |
 | Lint/Format | Biome |
 
 ## 9. Estructura de carpetas
@@ -441,7 +441,6 @@ Visualización: campanita con badge en header. Pantalla `/alertas` con soft dism
   /integration
   /e2e
 /infra
-  docker-compose.yml    # Postgres local para dev
   .env.example
 ```
 

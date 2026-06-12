@@ -4,9 +4,9 @@
 
 **Goal:** Build a Next.js 15 web app for José to manage remittances, wire sales, USD cash flow, operational expenses, and counterparty debts, replacing his WhatsApp + Excel workflow.
 
-**Architecture:** Next.js 15 App Router with Server Actions for mutations, Drizzle ORM on PostgreSQL (Neon), UI composed of `getdesign apple` template + `shadcn/ui` for data-dense components. TDD with Vitest + Playwright. Frequent commits per task.
+**Architecture:** Next.js 15 App Router with Server Actions for mutations, Drizzle ORM on PostgreSQL (Neon — único entorno), UI composed of `getdesign apple` template + `shadcn/ui` for data-dense components. Validación con scripts `tsx` (Vitest pendiente de resolver instalación). Frequent commits per task.
 
-**Tech Stack:** Next.js 15, TypeScript (strict), Drizzle ORM, PostgreSQL/Neon, Tailwind CSS, shadcn/ui, getdesign apple, React Hook Form, Zod, Vitest, Playwright, Biome.
+**Tech Stack:** Next.js 15, TypeScript (strict), Drizzle ORM, PostgreSQL/Neon, Tailwind CSS, shadcn/ui, getdesign apple, React Hook Form, Zod, tsx, Biome.
 
 ---
 
@@ -90,7 +90,7 @@
 /tests
   /setup.ts
 /infra
-  /docker-compose.yml
+  /docker-compose.yml      # NO USADO (Neon es el único entorno)
   /.env.example
 ```
 
@@ -121,19 +121,22 @@ git add -A
 git commit -m "chore: initialize Next.js 15 with TypeScript and Tailwind"
 ```
 
-### Task 0.2: Add Biome, Vitest, Playwright
+### Task 0.2: Add Biome (sin Vitest/Playwright por ahora)
 
 **Files:**
-- Create: `biome.json`, `vitest.config.ts`, `playwright.config.ts`, `tests/setup.ts`
+- Create: `biome.json`
+
+**Nota**: Vitest y Playwright se omiten por bloqueo de instalación. Tests se reemplazan por scripts `tsx` ejecutables con asserts. Cuando se resuelva el bloqueo, agregar Vitest como fase 9.
 
 - [ ] **Step 1: Install Biome**
 
 ```bash
-pnpm add -D @biomejs/biome
-pnpm dlx @biomejs/biome init
+pnpm add -w -D @biomejs/biome
 ```
 
-Edit `biome.json`:
+- [ ] **Step 2: Init Biome config**
+
+Create `biome.json`:
 ```json
 {
   "$schema": "https://biomejs.dev/schemas/1.9.0/schema.json",
@@ -143,115 +146,45 @@ Edit `biome.json`:
 }
 ```
 
-- [ ] **Step 2: Install Vitest**
+- [ ] **Step 3: Add scripts**
 
-```bash
-pnpm add -D vitest @vitejs/plugin-react @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
-```
-
-Create `vitest.config.ts`:
-```ts
-import { defineConfig } from "vitest/config";
-import react from "@vitejs/plugin-react";
-import path from "node:path";
-
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: "jsdom",
-    setupFiles: ["./tests/setup.ts"],
-    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx", "**/*.test.ts", "**/*.test.tsx"],
-  },
-  resolve: { alias: { "@": path.resolve(__dirname, ".") } },
-});
-```
-
-Create `tests/setup.ts`:
-```ts
-import "@testing-library/jest-dom/vitest";
-```
-
-- [ ] **Step 3: Install Playwright**
-
-```bash
-pnpm add -D @playwright/test
-pnpm dlx playwright install --with-deps chromium
-```
-
-Create `playwright.config.ts`:
-```ts
-import { defineConfig, devices } from "@playwright/test";
-
-export default defineConfig({
-  testDir: "./tests/e2e",
-  fullyParallel: true,
-  use: { baseURL: "http://localhost:3000" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: { command: "pnpm dev", url: "http://localhost:3000", reuseExistingServer: !process.env.CI },
-});
-```
-
-- [ ] **Step 4: Add npm scripts**
-
-Edit `package.json` scripts:
+Edit `package.json` scripts (merge, don't replace):
 ```json
 {
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
     "lint": "biome check .",
-    "format": "biome format --write .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "format": "biome format --write ."
   }
 }
 ```
 
-- [ ] **Step 5: Verify**
+- [ ] **Step 4: Verify**
 
-Run: `pnpm test`
-Expected: no test files found, exit 0.
+Run: `pnpm lint`
+Expected: no errors or only minor warnings.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add -A
-git commit -m "chore: add Biome, Vitest, Playwright"
+git commit -m "chore: add Biome"
 ```
 
-### Task 0.3: Local Postgres via Docker
+### Task 0.3: Configurar DATABASE_URL apuntando a Neon
 
-- [ ] **Step 1: Create docker-compose.yml**
+**Files:**
+- Create: `infra/.env.example`, `.env.local`, update `.gitignore`
 
-Create `infra/docker-compose.yml`:
-```yaml
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: killer
-      POSTGRES_PASSWORD: killer
-      POSTGRES_DB: killer
-    ports:
-      - "5432:5432"
-    volumes:
-      - killer-pg:/var/lib/postgresql/data
-volumes:
-  killer-pg:
+- [ ] **Step 1: Create env files**
+
+Create `infra/.env.example`:
+```
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
 ```
 
-- [ ] **Step 2: Create env files**
-
-Create `.env.example`:
+Create `.env.local` (con la URL real de Neon — pedirla al usuario):
 ```
-DATABASE_URL=postgresql://killer:killer@localhost:5432/killer
-```
-
-Create `.env.local`:
-```
-DATABASE_URL=postgresql://killer:killer@localhost:5432/killer
+DATABASE_URL=<pedir al usuario>
 ```
 
 Add to `.gitignore`:
@@ -260,23 +193,11 @@ Add to `.gitignore`:
 .env.local
 ```
 
-- [ ] **Step 3: Start Postgres**
+- [ ] **Step 2: Commit**
 
 ```bash
-docker compose -f infra/docker-compose.yml up -d
-```
-
-- [ ] **Step 4: Verify connection**
-
-```bash
-docker compose -f infra/docker-compose.yml exec postgres psql -U killer -d killer -c "SELECT 1;"
-```
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add infra/docker-compose.yml .env.example .gitignore
-git commit -m "chore: local Postgres via Docker Compose"
+git add infra/.env.example .gitignore
+git commit -m "chore: env files template for Neon"
 ```
 
 ### Task 0.4: Drizzle ORM setup
@@ -514,7 +435,7 @@ export const config = pgTable("config", {
 
 ```bash
 pnpm db:push
-docker compose -f infra/docker-compose.yml exec postgres psql -U killer -d killer -c "\dt"
+psql $env:DATABASE_URL -c "\dt"   # o en PowerShell: $env:DATABASE_URL = (Get-Content .env.local -Raw).Trim()
 ```
 
 - [ ] **Step 3: Commit**

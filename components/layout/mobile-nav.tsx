@@ -10,7 +10,7 @@ export function MobileNav({ onMenuOpen }: { onMenuOpen: () => void }) {
   const items = [
     { href: "/", label: "Inicio", icon: LayoutDashboard },
     { href: "/cuadres", label: "Cuadres", icon: ClipboardList },
-    { href: "/cuadres/nuevo", label: "Nuevo", icon: PlusCircle, primary: true },
+    { href: "/nuevo", label: "Nuevo", icon: PlusCircle, primary: true },
     { href: "/remeseros", label: "Remeseros", icon: Users },
   ];
 

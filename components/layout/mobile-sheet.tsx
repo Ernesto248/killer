@@ -35,11 +35,11 @@ export function MobileSheet({ open, onOpenChange }: { open: boolean; onOpenChang
             Dashboard
           </Link>
           <Link
-            href="/cuadres/nuevo"
+            href="/nuevo"
             onClick={() => onOpenChange(false)}
             className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
           >
-            Pegar cuadre
+            + Nuevo registro
           </Link>
           {extraItems.map((it) => {
             const active = pathname === it.href;

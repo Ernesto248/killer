@@ -2,10 +2,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, ClipboardList, TrendingUp, Users, UserCheck, ArrowRightLeft, Receipt, Bell, Settings } from "lucide-react";
+import { LayoutDashboard, ClipboardList, TrendingUp, Users, UserCheck, ArrowRightLeft, Receipt, Bell, Settings, PlusCircle } from "lucide-react";
 
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/nuevo", label: "Nuevo", icon: PlusCircle },
   { href: "/cuadres", label: "Cuadres", icon: ClipboardList },
   { href: "/wires", label: "Wires", icon: TrendingUp },
   { href: "/remeseros", label: "Remeseros", icon: Users },

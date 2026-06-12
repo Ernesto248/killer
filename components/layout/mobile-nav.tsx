@@ -15,7 +15,7 @@ export function MobileNav({ onMenuOpen }: { onMenuOpen: () => void }) {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-black/5 safe-area-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-2xl border-t border-black/5 safe-area-bottom">
       <div className="flex items-center justify-around h-16 px-2">
         {items.map((it) => {
           const active = pathname === it.href || (it.href !== "/" && pathname.startsWith(it.href));

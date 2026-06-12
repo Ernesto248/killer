@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { cuadre, remesero } from "@/lib/db/schema";
+
+export const dynamic = "force-dynamic";
 import { eq, desc } from "drizzle-orm";
 
 export default async function CuadresPage() {

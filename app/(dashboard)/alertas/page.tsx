@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { alert } from "@/lib/db/schema";
+
+export const dynamic = "force-dynamic";
 import { desc, isNull } from "drizzle-orm";
 import { DismissButton } from "./dismiss-button";
 

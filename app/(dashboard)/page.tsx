@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { dailySnapshot, alert } from "@/lib/db/schema";
+
+export const dynamic = "force-dynamic";
 import { desc, isNull } from "drizzle-orm";
 import { computeDailySnapshot } from "@/lib/domain/snapshot";
 import { CapitalEvolution } from "@/components/charts/capital-evolution";
@@ -15,19 +17,19 @@ export default async function Dashboard() {
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Dashboard</h2>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="rounded border p-3">
+        <div className="card-apple p-4">
           <div className="text-sm text-muted-foreground">Capital neto</div>
           <div className="text-2xl tabular-nums">${latest ? Number(latest.capitalNetoUsd).toLocaleString() : "0"}</div>
         </div>
-        <div className="rounded border p-3">
+        <div className="card-apple p-4">
           <div className="text-sm text-muted-foreground">A tu favor</div>
           <div className="text-2xl tabular-nums text-green-600">${latest ? Number(latest.totalAFavorUsd).toLocaleString() : "0"}</div>
         </div>
-        <div className="rounded border p-3">
+        <div className="card-apple p-4">
           <div className="text-sm text-muted-foreground">Que debes</div>
           <div className="text-2xl tabular-nums text-red-600">${latest ? Number(latest.totalDeboUsd).toLocaleString() : "0"}</div>
         </div>
-        <div className="rounded border p-3">
+        <div className="card-apple p-4">
           <div className="text-sm text-muted-foreground">Tasa</div>
           <div className="text-2xl tabular-nums">{latest?.tasaGlobalCup ?? "—"}</div>
         </div>

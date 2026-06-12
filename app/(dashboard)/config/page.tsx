@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { config } from "@/lib/db/schema";
+
+export const dynamic = "force-dynamic";
 import { eq } from "drizzle-orm";
 import { TasaGlobalForm } from "./tasa-form";
 import Link from "next/link";

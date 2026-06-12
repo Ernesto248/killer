@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { account } from "@/lib/db/schema";
+
+export const dynamic = "force-dynamic";
 import { WireForm } from "./wire-form";
 
 export default async function NuevoWirePage() {

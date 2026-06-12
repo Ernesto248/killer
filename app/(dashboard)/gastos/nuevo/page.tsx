@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { category, account } from "@/lib/db/schema";
+
+export const dynamic = "force-dynamic";
 import { eq } from "drizzle-orm";
 import { GastoForm } from "./gasto-form";
 

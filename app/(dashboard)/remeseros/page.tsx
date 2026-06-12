@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { remesero, remeseroBalance } from "@/lib/db/schema";
+
+export const dynamic = "force-dynamic";
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
 

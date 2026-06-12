@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { wireBuyer, wireBuyerBalance } from "@/lib/db/schema";
+
+export const dynamic = "force-dynamic";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 

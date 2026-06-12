@@ -9,9 +9,9 @@ export function MobileNav({ onMenuOpen }: { onMenuOpen: () => void }) {
 
   const items = [
     { href: "/", label: "Inicio", icon: LayoutDashboard },
-    { href: "/cuadres", label: "Cuadres", icon: ClipboardList },
-    { href: "/nuevo", label: "Nuevo", icon: PlusCircle, primary: true },
     { href: "/remeseros", label: "Remeseros", icon: Users },
+    { href: "/nuevo", label: "Nuevo", icon: PlusCircle, primary: true },
+    { href: "/cuadres", label: "Cuadres", icon: ClipboardList },
   ];
 
   return (

@@ -7,9 +7,9 @@ import { LayoutDashboard, ClipboardList, TrendingUp, Users, UserCheck, ArrowRigh
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/nuevo", label: "Nuevo", icon: PlusCircle },
+  { href: "/remeseros", label: "Remeseros", icon: Users },
   { href: "/cuadres", label: "Cuadres", icon: ClipboardList },
   { href: "/wires", label: "Wires", icon: TrendingUp },
-  { href: "/remeseros", label: "Remeseros", icon: Users },
   { href: "/wire-buyers", label: "Wire Buyers", icon: UserCheck },
   { href: "/tesoreria/movimiento", label: "Tesorería", icon: ArrowRightLeft },
   { href: "/gastos", label: "Gastos", icon: Receipt },

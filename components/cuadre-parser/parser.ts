@@ -12,55 +12,69 @@ function parseAmount(raw: string): number {
   return Number(raw.replace(/[$*.,\s`]/g, "")) || 0;
 }
 
-function sanitize(text: string): string {
-  return text
-    .replace(/\u2068/g, "")
-    .replace(/\u2069/g, "")
-    .replace(/\u200E/g, "")
-    .replace(/\u200F/g, "")
-    .replace(/\u202A/g, "")
-    .replace(/\u202C/g, "")
-    .replace(/\u202D/g, "")
-    .replace(/\u202E/g, "");
-}
-
-function findSection(text: string, markers: string[], untilMarkers: string[]): string {
-  for (const marker of markers) {
-    const start = text.indexOf(marker);
-    if (start < 0) continue;
-    const after = text.slice(start + marker.length);
-    for (const until of untilMarkers) {
-      const end = after.indexOf(until);
-      if (end >= 0) return after.slice(0, end);
-    }
-    return after;
-  }
-  return "";
-}
+const STRIP = /[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFE00-\uFE0F\uFEFF\u200D]/g;
+const clean = (t: string) => t.replace(STRIP, "");
 
 export function parseCuadre(text: string): ParsedCuadre {
-  const t = sanitize(text);
+  const t = clean(text);
 
-  const tiradoSection = findSection(t, ["🆃🅸🆁🅐🅳🅞"], ["🚩 🅵🅸🅽🅐", "🚩 🅵🅸🅽🅐🅛"]);
-  const inicialSection = findSection(t, ["🅸🅽🅸🅲🅸🅞 📖", "🅸🅽🅸🅲🅸🅞"], ["🪎"]);
-  const pagadoSection = findSection(t, ["🅟🅐🅖🅐🅳🅞"], ["📌", "🅟🅴🅽"]);
+  // Find sections using STABLE separators (single emojis, not letter sequences)
+  const sepPagado = "\u{1FA8E}";  // 🪎
+  const sepPendientes = "\u{1F4CC}"; // 📌
+  const tiradoMarker = "\u{1F1FA}\u{1F1F2}"; // 🇺🇲 US flag starts tirado line
+  const finalBook = "\u{1F4D5}"; // 📕  — appears in final section
+  const remeseroAt = /@\s*([^\n`]+?)(?:\s*```|$)/;
 
-  const finalSection = findSection(t, ["🅵🅸🅽🅐🅛 📕", "🅵🅸🅽🅐🅛"], ["@"]);
+  // Pagado: text between 🪎 and 📌
+  const pagadoStart = t.indexOf(sepPagado);
+  const pagadoEnd = t.indexOf(sepPendientes, pagadoStart >= 0 ? pagadoStart : 0);
+  let pagadoSection = "";
+  if (pagadoStart >= 0 && pagadoEnd > pagadoStart) {
+    pagadoSection = t.slice(pagadoStart, pagadoEnd);
+  }
 
-  const inicialNums = [...inicialSection.matchAll(/[\d.,]+/g)].map((m) => parseAmount(m[0]));
-  const finalNums = [...finalSection.matchAll(/[\d.,]+/g)].map((m) => parseAmount(m[0]));
-  const finalLabel = (/deuda|fondo/i).exec(finalSection)?.[0]?.toLowerCase() as "deuda" | "fondo" | undefined;
+  // Tirado: text between 🇺🇲 and 📕 (or @)
+  const tiradoStart = t.indexOf(tiradoMarker);
+  const tiradoEnd = t.indexOf(finalBook, tiradoStart >= 0 ? tiradoStart + 1 : 0);
+  let tiradoSection = "";
+  if (tiradoStart >= 0 && tiradoEnd > tiradoStart) {
+    tiradoSection = t.slice(tiradoStart, tiradoEnd);
+  }
+
+  // Inicial: text after "📖" (book emoji, 1F4D6) until 🪎
+  const inicialBook = "\u{1F4D6}";
+  const inicialStart = t.indexOf(inicialBook);
+  const inicialEnd = t.indexOf(sepPagado, inicialStart >= 0 ? inicialStart : 0);
+  let inicialSection = "";
+  if (inicialStart >= 0 && inicialEnd > inicialStart) {
+    inicialSection = t.slice(inicialStart, inicialEnd);
+  } else if (inicialStart >= 0) {
+    inicialSection = t.slice(inicialStart, inicialStart + 60); // fallback
+  }
+
+  // Final: text around 📕 until @
+  const finalStart = t.indexOf(finalBook);
+  const remMatch = remeseroAt.exec(finalStart >= 0 ? t.slice(finalStart) : t);
+  let finalSection = "";
+  if (finalStart >= 0) {
+    finalSection = t.slice(finalStart, finalStart + 80);
+  }
+
+  // Parse amounts
+  const inicialNums = inicialSection.match(/[\d.,]+/g)?.map(parseAmount) ?? [];
+  const finalNums = finalSection.match(/[\d.,]+/g)?.map(parseAmount) ?? [];
+  const finalLabel = /deuda|fondo/i.exec(finalSection)?.[0]?.toLowerCase() as "deuda" | "fondo" | undefined;
 
   const pagadoAmounts = [...pagadoSection.matchAll(/\$\s*([\d.,]+)/g)].map((m) => parseAmount(m[1]));
-  const pagadoCup = pagadoAmounts.reduce((a, b) => a + b, 0);
+  const pagadoCup = pagadoAmounts.reduce((a: number, b: number) => a + b, 0);
 
   const tiradoItems = [...tiradoSection.matchAll(/([\d.,]+)\s*×\s*(\d+)/g)].map((m) => ({
     usd: parseAmount(m[1]),
     tasa: parseAmount(m[2]),
   }));
 
-  const remeseroMatch = t.match(/@\s*([^\n`]+?)(?:\s*```|$)/);
-  const remesero = remeseroMatch ? remeseroMatch[1].trim() : null;
+  const remMatch2 = remeseroAt.exec(t);
+  const remesero = remMatch2 ? remMatch2[1].trim() : null;
 
   return {
     remesero,

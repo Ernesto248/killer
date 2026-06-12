@@ -41,18 +41,21 @@ export default async function Dashboard() {
       </div>
 
       {tasas && (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="card-apple p-4">
-            <div className="text-xs text-muted-foreground uppercase tracking-wide">Dólar (CUP)</div>
-            <div className="text-2xl tabular-nums font-semibold mt-1">{tasas.usd?.toLocaleString() ?? "—"} CUP</div>
-            <div className="text-xs text-muted-foreground mt-1">Actualizado {tasas.updatedAt}</div>
+        <>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">El Toque</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="card-apple p-4">
+              <div className="text-xs text-muted-foreground uppercase tracking-wide">Dólar (CUP)</div>
+              <div className="text-2xl tabular-nums font-semibold mt-1">{tasas.usd?.toLocaleString() ?? "—"} CUP</div>
+              <div className="text-xs text-muted-foreground mt-1">Actualizado {tasas.updatedAt}</div>
+            </div>
+            <div className="card-apple p-4">
+              <div className="text-xs text-muted-foreground uppercase tracking-wide">Euro (CUP)</div>
+              <div className="text-2xl tabular-nums font-semibold mt-1">{tasas.eur?.toLocaleString() ?? "—"} CUP</div>
+              <div className="text-xs text-muted-foreground mt-1">Actualizado {tasas.updatedAt}</div>
+            </div>
           </div>
-          <div className="card-apple p-4">
-            <div className="text-xs text-muted-foreground uppercase tracking-wide">Euro (CUP)</div>
-            <div className="text-2xl tabular-nums font-semibold mt-1">{tasas.eur?.toLocaleString() ?? "—"} CUP</div>
-            <div className="text-xs text-muted-foreground mt-1">Actualizado {tasas.updatedAt}</div>
-          </div>
-        </div>
+        </>
       )}
 
       <section>

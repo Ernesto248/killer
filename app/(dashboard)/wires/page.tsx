@@ -1,24 +1,84 @@
 import { db } from "@/lib/db";
 import { wire, wireBuyer } from "@/lib/db/schema";
+import { eq, desc, sql } from "drizzle-orm";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
-import { eq, desc } from "drizzle-orm";
 
 export default async function WiresPage() {
   const rows = await db
-    .select({ id: wire.id, date: wire.date, buyerName: wireBuyer.name, usd: wire.usdAmount, cupTotal: wire.cupTotal, ganancia: wire.gananciaEstimadaCup })
+    .select({
+      id: wire.id,
+      date: wire.date,
+      buyerName: wireBuyer.name,
+      usd: wire.usdAmount,
+      tasa: wire.tasaCup,
+      cupTotal: wire.cupTotal,
+      pagado: sql<number>`COALESCE((SELECT SUM(cup_amount::numeric) FROM wire_payment WHERE wire_payment.wire_id = wire.id), 0)::text`,
+    })
     .from(wire)
     .leftJoin(wireBuyer, eq(wireBuyer.id, wire.wireBuyerId))
-    .orderBy(desc(wire.date))
-    .limit(50);
+    .orderBy(desc(wire.date));
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Wires</h2>
-      <div className="overflow-x-auto"><table className="w-full border-collapse text-sm">
-        <thead><tr className="border-b text-left"><th className="p-2">Fecha</th><th className="p-2">Buyer</th><th className="p-2 text-right">USD</th><th className="p-2 text-right">CUP Total</th><th className="p-2 text-right">Ganancia</th></tr></thead>
-        <tbody>{rows.map((r) => (<tr key={r.id} className="border-b"><td className="p-2">{r.date?.toLocaleDateString()}</td><td className="p-2">{r.buyerName}</td><td className="p-2 text-right tabular-nums">{Number(r.usd).toLocaleString()}</td><td className="p-2 text-right tabular-nums">{Number(r.cupTotal).toLocaleString()}</td><td className="p-2 text-right tabular-nums">{Number(r.ganancia ?? 0).toLocaleString()}</td></tr>))}</tbody>
-      </table></div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold">Wires</h2>
+        <Link href="/wires/nuevo" className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-accent transition-colors">
+          <Plus className="h-4 w-4" /> Nuevo wire
+        </Link>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">No hay wires registrados</div>
+      ) : (
+        <div className="card-apple overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-black/5 bg-muted/40">
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground text-xs">Fecha</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground text-xs">Buyer</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground text-xs">USD</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground text-xs">Tasa</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground text-xs">CUP Total</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground text-xs">Pagado</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground text-xs">Pendiente</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => {
+                  const cupTotal = Number(r.cupTotal ?? 0);
+                  const pagado = Number(r.pagado ?? 0);
+                  const pendiente = cupTotal - pagado;
+                  return (
+                    <tr key={r.id} className="border-b border-black/5 hover:bg-accent/50 transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <Link href={`/wires/${r.id}`} className="hover:underline font-medium">
+                          {r.date?.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit" }) ?? "—"}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 max-w-[120px] truncate">{r.buyerName ?? "—"}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{Number(r.usd ?? 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{Number(r.tasa ?? 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right tabular-nums font-semibold">{cupTotal.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-green-600">{pagado.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {pendiente > 0 ? (
+                          <span className="text-red-600 font-semibold">{pendiente.toLocaleString()}</span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">Completado</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

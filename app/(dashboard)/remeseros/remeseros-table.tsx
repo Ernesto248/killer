@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronUp, ChevronDown, X } from "lucide-react";
+import { Search, ChevronUp, ChevronDown, X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -12,6 +12,7 @@ type RemeseroRow = {
   balanceCup: string | null;
   balanceUsd: string | null;
   lastCuadreAt: Date | null;
+  lastLabel: string | null;
 };
 
 type SortKey = "name" | "balanceCup" | "balanceUsd" | "lastCuadreAt";
@@ -102,25 +103,38 @@ export function RemeserosTable({ rows }: { rows: RemeseroRow[] }) {
                       </button>
                     </th>
                   ))}
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => {
                   const cup = Number(r.balanceCup ?? 0);
                   const usd = Number(r.balanceUsd ?? 0);
+                  const isDeuda = r.lastLabel === "deuda";
+                  const isFondo = r.lastLabel === "fondo";
+
                   return (
                     <tr key={r.id} className="border-b border-black/5 hover:bg-accent/50 transition-colors">
                       <td className="px-4 py-3 font-medium max-w-[180px] truncate">
                         <Link href={`/remeseros/${r.id}`} className="hover:underline">{r.name}</Link>
                       </td>
-                      <td className={cn("px-4 py-3 text-right tabular-nums font-medium", cup > 0 ? "text-green-600" : cup < 0 ? "text-red-600" : "text-muted-foreground")}>
+                      <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", isDeuda ? "text-red-600" : isFondo ? "text-green-600" : cup > 0 ? "text-green-600" : cup < 0 ? "text-red-600" : "text-muted-foreground")}>
                         {cup.toLocaleString()}
                       </td>
-                      <td className={cn("px-4 py-3 text-right tabular-nums font-medium", usd > 0 ? "text-green-600" : usd < 0 ? "text-red-600" : "text-muted-foreground")}>
+                      <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", usd > 0 ? "text-green-600" : usd < 0 ? "text-red-600" : "text-muted-foreground")}>
                         {usd.toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                         {r.lastCuadreAt?.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit" }) ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <Link
+                          href={`/nuevo?tab=cuadre&remesero=${encodeURIComponent(r.name)}`}
+                          className="inline-flex items-center gap-1 h-8 text-xs rounded-md border px-3 hover:bg-accent transition-colors"
+                        >
+                          <FileText className="h-3 w-3" />
+                          Cuadre
+                        </Link>
                       </td>
                     </tr>
                   );

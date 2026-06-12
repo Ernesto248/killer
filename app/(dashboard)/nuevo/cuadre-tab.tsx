@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { parseCuadre, type ParsedCuadre } from "@/components/cuadre-parser/parser";
 import { createCuadreAction } from "@/server/actions/cuadre";
 import { Button } from "@/components/ui/button";
@@ -17,13 +17,19 @@ const empty: ParsedCuadre = {
   balanceFinalCup: null, balanceFinalLabel: null,
 };
 
-export function CuadreTab({ remeseros }: { remeseros: Array<{ id: number; name: string }> }) {
+export function CuadreTab({ remeseros, initialRemesero }: { remeseros: Array<{ id: number; name: string }>; initialRemesero?: string }) {
   const [text, setText] = useState("");
   const [parsed, setParsed] = useState<ParsedCuadre>(empty);
   const [tirado, setTirado] = useState<Array<{ usd: number; tasa: number }>>([]);
-  const [selectedRemesero, setSelectedRemesero] = useState("");
+  const [selectedRemesero, setSelectedRemesero] = useState(initialRemesero ?? "");
   const [remeseroOpen, setRemeseroOpen] = useState(false);
   const [pending, start] = useTransition();
+
+  useEffect(() => {
+    if (initialRemesero) {
+      setSelectedRemesero(initialRemesero);
+    }
+  }, [initialRemesero]);
 
   const onTextChange = (v: string) => {
     setText(v);

@@ -1,5 +1,5 @@
 let cached: { data: { usd: number; eur: number; updatedAt: string } | null; ts: number } | null = null;
-const TTL_MS = 60 * 60 * 1000; // 1 hour
+const TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 export async function fetchTasas(): Promise<{ usd: number; eur: number; updatedAt: string } | null> {
   if (cached && Date.now() - cached.ts < TTL_MS) {
@@ -17,6 +17,10 @@ export async function fetchTasas(): Promise<{ usd: number; eur: number; updatedA
       headers: { Authorization: `Bearer ${key}` },
       next: { revalidate: 3600 },
     });
+    if (res.status === 429 && cached?.data) {
+      console.warn("HTTP 429, using stale cache");
+      return cached.data;
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     const data = {
@@ -28,7 +32,8 @@ export async function fetchTasas(): Promise<{ usd: number; eur: number; updatedA
     cached = { data, ts: Date.now() };
     return data;
   } catch (e) {
-    console.error("fetchTasas failed:", (e as Error).message);
+    const msg = (e as Error).message;
+    if (msg !== "HTTP 429") console.error("fetchTasas failed:", msg);
     return null;
   }
 }

@@ -19,24 +19,24 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl sm:text-2xl font-semibold">Dashboard</h2>
+      <h2 className="text-lg sm:text-2xl font-semibold">Dashboard</h2>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="card-apple p-4">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Capital neto</div>
-          <div className="text-xl sm:text-2xl tabular-nums font-semibold mt-1">${latest ? Number(latest.capitalNetoUsd).toLocaleString() : "0"}</div>
+          <div className="text-lg sm:text-2xl tabular-nums font-semibold mt-1">${latest ? Number(latest.capitalNetoUsd).toLocaleString() : "0"}</div>
         </div>
         <div className="card-apple p-4">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">A tu favor</div>
-          <div className="text-xl sm:text-2xl tabular-nums font-semibold mt-1 text-green-600">${latest ? Number(latest.totalAFavorUsd).toLocaleString() : "0"}</div>
+          <div className="text-lg sm:text-2xl tabular-nums font-semibold mt-1 text-green-600">${latest ? Number(latest.totalAFavorUsd).toLocaleString() : "0"}</div>
         </div>
         <div className="card-apple p-4">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Que debes</div>
-          <div className="text-xl sm:text-2xl tabular-nums font-semibold mt-1 text-red-600">${latest ? Number(latest.totalDeboUsd).toLocaleString() : "0"}</div>
+          <div className="text-lg sm:text-2xl tabular-nums font-semibold mt-1 text-red-600">${latest ? Number(latest.totalDeboUsd).toLocaleString() : "0"}</div>
         </div>
         <div className="card-apple p-4">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Tasa global</div>
-          <div className="text-xl sm:text-2xl tabular-nums font-semibold mt-1">{latest?.tasaGlobalCup ?? "—"}</div>
+          <div className="text-lg sm:text-2xl tabular-nums font-semibold mt-1">{latest?.tasaGlobalCup ?? "—"}</div>
         </div>
       </div>
 
@@ -46,12 +46,12 @@ export default async function Dashboard() {
           <div className="grid grid-cols-2 gap-3">
             <div className="card-apple p-4">
               <div className="text-xs text-muted-foreground uppercase tracking-wide">Dólar (CUP)</div>
-              <div className="text-xl sm:text-2xl tabular-nums font-semibold mt-1">{tasas.usd?.toLocaleString() ?? "—"} CUP</div>
+              <div className="text-lg sm:text-2xl tabular-nums font-semibold mt-1">{tasas.usd?.toLocaleString() ?? "—"} CUP</div>
               <div className="text-xs text-muted-foreground mt-1">Actualizado {tasas.updatedAt}</div>
             </div>
             <div className="card-apple p-4">
               <div className="text-xs text-muted-foreground uppercase tracking-wide">Euro (CUP)</div>
-              <div className="text-xl sm:text-2xl tabular-nums font-semibold mt-1">{tasas.eur?.toLocaleString() ?? "—"} CUP</div>
+              <div className="text-lg sm:text-2xl tabular-nums font-semibold mt-1">{tasas.eur?.toLocaleString() ?? "—"} CUP</div>
               <div className="text-xs text-muted-foreground mt-1">Actualizado {tasas.updatedAt}</div>
             </div>
           </div>

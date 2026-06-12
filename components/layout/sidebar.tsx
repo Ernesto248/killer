@@ -20,7 +20,7 @@ const items = [
 export function Sidebar() {
   const pathname = usePathname();
   return (
-    <aside className="hidden md:flex w-60 flex-col glass-sidebar p-5">
+    <aside className="hidden md:flex w-52 flex-col glass-sidebar p-5">
       <div className="mb-8 mt-2">
         <h1 className="text-xl font-bold tracking-tight text-primary">Killer</h1>
         <p className="text-xs text-muted-foreground mt-0.5">Gestión de remesas</p>

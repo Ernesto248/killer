@@ -112,7 +112,7 @@ export function CuadresTable({ rows }: { rows: CuadreRow[] }) {
                   return (
                     <tr key={r.id} className="border-b border-black/5 hover:bg-accent/50 transition-colors">
                       <td className="px-4 py-3 tabular-nums whitespace-nowrap">{r.date?.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit" }) ?? "—"}</td>
-                      <td className="px-4 py-3 font-medium max-w-[160px] truncate">{r.remeseroName ?? "—"}</td>
+                      <td className="px-4 py-3 font-medium max-w-[120px] truncate">{r.remeseroName ?? "—"}</td>
                       <td className="px-4 py-3 text-right tabular-nums">{Number(r.inicial ?? 0).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right tabular-nums">{Number(r.pagado ?? 0).toLocaleString()}</td>
                       <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", isDeuda && "text-red-600", isFondo && "text-green-600")}>

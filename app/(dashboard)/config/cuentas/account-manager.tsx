@@ -19,7 +19,7 @@ export function AccountManager({ accounts }: { accounts: Account[] }) {
         className="flex flex-wrap items-end gap-2"
       >
         <Input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} required className="max-w-xs" />
-        <Select value={type} onValueChange={setType}>
+        <Select value={type} onValueChange={(v) => setType(v ?? "")}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="llc_usa">LLC USA</SelectItem>
@@ -27,7 +27,7 @@ export function AccountManager({ accounts }: { accounts: Account[] }) {
             <SelectItem value="efectivo_usd">Efectivo USD</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={currency} onValueChange={setCurrency}>
+        <Select value={currency} onValueChange={(v) => setCurrency(v ?? "")}>
           <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="USD">USD</SelectItem>

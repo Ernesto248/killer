@@ -33,8 +33,9 @@ export function CuadreForm() {
       return;
     }
     start(async () => {
+      const name = parsed.remesero!;
       await createCuadreAction({
-        remeseroName: parsed.remesero,
+        remeseroName: name,
         date: new Date(),
         balanceInicialCup: parsed.balanceInicialCup!,
         pagadoCup: parsed.pagadoCup,

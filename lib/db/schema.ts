@@ -36,6 +36,7 @@ export const account = pgTable("account", {
   name: text("name").notNull(),
   type: text("type").notNull(),
   currency: text("currency").notNull(),
+  bank: text("bank"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

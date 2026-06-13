@@ -1,119 +1,203 @@
 "use client";
 import { useState, useTransition } from "react";
-import { createWireAction } from "@/server/actions/wire";
+import { createWireAction, createAccountAction } from "@/server/actions/wire";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatInputNumber, parseInputNumber } from "@/lib/format";
-import { Info } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Check, ChevronsUpDown, Wallet, UserPlus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type Account = { id: number; name: string; currency: string; type: string };
-type Split = { destinoAccountId: number; usdAmount: string; tasaDestino: string };
+type Buyer = { id: number; name: string };
+type Acct = { id: number; name: string; currency: string; bank: string | null; type: string };
 
-export function WireForm({ accounts }: { accounts: Account[] }) {
-  const [buyerName, setBuyerName] = useState("");
+export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer[] }) {
   const [usdAmount, setUsdAmount] = useState("");
-  const [tasaCup, setTasaCup] = useState("650");
-  const [nota, setNota] = useState("");
-  const [splits, setSplits] = useState<Split[]>([]);
+  const [tasa, setTasa] = useState("");
+  const [moneda, setMoneda] = useState<"CUP" | "USD">("CUP");
+  const [buyerOpen, setBuyerOpen] = useState(false);
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerQuery, setBuyerQuery] = useState("");
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<Acct | null>(null);
+  const [newBank, setNewBank] = useState("");
+  const [newUser, setNewUser] = useState("");
+  const [newAccName, setNewAccName] = useState("");
+  const [newAccCurrency, setNewAccCurrency] = useState("CUP");
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [pending, start] = useTransition();
 
-  const usd = parseInputNumber(usdAmount);
-  const tasa = parseInputNumber(tasaCup);
-  const cupTotal = usd * tasa;
-  const totalSplitUsd = splits.reduce((a, s) => a + parseInputNumber(s.usdAmount), 0);
+  const usd = Number(usdAmount.replace(/[,\s]/g, "")) || 0;
+  const tasaNum = Number(tasa.replace(/[,\s]/g, "")) || 0;
+  const total = moneda === "CUP" ? usd * tasaNum : usd * (1 + tasaNum / 100);
 
-  const addSplit = () => setSplits([...splits, { destinoAccountId: accounts[1]?.id ?? 0, usdAmount: "", tasaDestino: "" }]);
-  const valid = buyerName && usd > 0 && tasa > 0 && Math.abs(totalSplitUsd - usd) < 0.01 && splits.length > 0;
+  const filteredBuyers = buyers.filter((b) =>
+    !buyerQuery || b.name.toLowerCase().includes(buyerQuery.toLowerCase())
+  );
 
   const submit = () => {
+    if (!buyerName || !usd || !tasaNum || !selectedAccount) return;
     start(async () => {
+      const llc = accounts.find((a) => a.type === "llc_usa");
+      if (!llc) return alert("Cuenta LLC USA no encontrada");
       await createWireAction({
-        wireBuyerName: buyerName,
+        wireBuyerName: buyerName.trim(),
         date: new Date(),
         usdAmount: usd,
-        tasaCup: tasa,
-        splits: splits.map((s) => ({
-          destinoAccountId: s.destinoAccountId,
-          usdAmount: parseInputNumber(s.usdAmount),
-          tasaDestino: parseInputNumber(s.tasaDestino),
-        })),
-        nota: nota || undefined,
+        tasa: tasaNum,
+        monedaDestino: moneda,
+        fromAccountId: llc.id,
+        toAccountId: selectedAccount.id,
       });
-      setBuyerName(""); setUsdAmount(""); setTasaCup("650"); setNota(""); setSplits([]);
+      setUsdAmount(""); setTasa(""); setBuyerName(""); setMoneda("CUP"); setSelectedAccount(null); setBuyerQuery("");
     });
   };
 
-  const llcAccount = accounts.find((a) => a.type === "llc_usa");
+  const createAccount = async () => {
+    if (!newAccName) return;
+    const row = await createAccountAction({ name: newAccName, currency: newAccCurrency });
+    // Add to local list
+    const newAcct: Acct = { id: row.id, name: newAccName, currency: newAccCurrency, bank: null, type: newAccCurrency === "USD" ? "efectivo_usd" : "efectivo_cup" };
+    accounts.push(newAcct);
+    setSelectedAccount(newAcct);
+    setDialogOpen(false);
+    setNewAccName("");
+  };
 
   return (
-    <div className="max-w-lg space-y-5">
+    <div className="max-w-md space-y-5">
       <div className="card-apple p-4 space-y-4">
         <div>
-          <label className="text-xs font-medium text-muted-foreground uppercase">Wire buyer</label>
-          <Input placeholder="Nombre del comprador" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} className="mt-1" />
+          <Label className="text-xs text-muted-foreground uppercase">USD</Label>
+          <Input
+            type="text"
+            inputMode="numeric"
+            placeholder="10,000"
+            value={usdAmount}
+            onChange={(e) => setUsdAmount(e.target.value)}
+            className="mt-1"
+          />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground uppercase">USD</label>
-            <Input type="text" inputMode="numeric" placeholder="10,000" value={usdAmount} onChange={(e) => setUsdAmount(e.target.value)} className="mt-1" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground uppercase">Tasa (CUP/USD)</label>
-            <Input type="text" inputMode="numeric" placeholder="650" value={tasaCup} onChange={(e) => setTasaCup(e.target.value)} className="mt-1" />
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase">Recibo en</Label>
+          <div className="flex gap-2 mt-1">
+            <Button size="sm" variant={moneda === "CUP" ? "default" : "outline"} className="flex-1" onClick={() => setMoneda("CUP")}>CUP</Button>
+            <Button size="sm" variant={moneda === "USD" ? "default" : "outline"} className="flex-1" onClick={() => setMoneda("USD")}>USD</Button>
           </div>
         </div>
 
-        <div className="rounded-lg bg-muted/40 p-3 flex items-center justify-between">
-          <div>
-            <div className="text-xs text-muted-foreground uppercase">Total CUP</div>
-            <div className="text-xl font-semibold tabular-nums">{formatInputNumber(cupTotal)}</div>
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase">{moneda === "CUP" ? "Tasa (CUP/USD)" : "% comisión"}</Label>
+          <Input
+            type="text"
+            inputMode="numeric"
+            placeholder={moneda === "CUP" ? "680" : "3"}
+            value={tasa}
+            onChange={(e) => setTasa(e.target.value)}
+            className="mt-1"
+          />
+        </div>
+
+        <div className="rounded-lg bg-muted/40 p-3 text-center">
+          <div className="text-xs text-muted-foreground uppercase">Total</div>
+          <div className="text-xl font-semibold tabular-nums">
+            {total > 0 ? total.toLocaleString() : "—"} {moneda}
           </div>
-          <Info className="h-4 w-4 text-muted-foreground" />
         </div>
       </div>
 
-      <div className="card-apple p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Cuentas destino</h3>
-          <Button variant="outline" size="sm" className="text-xs h-7" onClick={addSplit}>+ Añadir</Button>
+      <div className="card-apple p-4 space-y-4">
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase">Comprador</Label>
+          <Popover open={buyerOpen} onOpenChange={setBuyerOpen}>
+            <PopoverTrigger
+              render={<Button variant="outline" role="combobox" className="w-full justify-between mt-1 font-normal">
+                {buyerName || "Buscar comprador..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+              </Button>}
+            />
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Buscar..." value={buyerQuery} onValueChange={setBuyerQuery} />
+                <CommandList>
+                  <CommandEmpty>
+                    <div className="p-2 text-sm text-muted-foreground">
+                      No encontrado. Escribí el nombre y se creará al guardar.
+                    </div>
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {filteredBuyers.map((b) => (
+                      <CommandItem key={b.id} value={b.name} onSelect={() => { setBuyerName(b.name); setBuyerOpen(false); setBuyerQuery(""); }}>
+                        <Check className={cn("mr-2 h-4 w-4", buyerName === b.name ? "opacity-100" : "opacity-0")} />
+                        {b.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
-        <div className="rounded-lg bg-muted/30 p-3 flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Origen</span>
-          <span className="font-medium">{llcAccount?.name ?? "LLC USA"} ({llcAccount?.currency ?? "USD"})</span>
-        </div>
-
-        {splits.map((s, i) => (
-          <div key={i} className="space-y-2 rounded-lg border border-black/5 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Destino #{i + 1}</span>
-              <Button variant="ghost" size="sm" className="h-6 px-1 text-xs text-muted-foreground" onClick={() => setSplits(splits.filter((_, j) => j !== i))}>Quitar</Button>
-            </div>
-            <Select value={String(s.destinoAccountId)} onValueChange={(v) => { const c = [...splits]; c[i].destinoAccountId = Number(v); setSplits(c); }}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>{accounts.map((a) => <SelectItem key={a.id} value={String(a.id)}>{a.name} ({a.currency})</SelectItem>)}</SelectContent>
-            </Select>
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="text" inputMode="numeric" placeholder="USD" value={s.usdAmount} onChange={(e) => { const c = [...splits]; c[i].usdAmount = e.target.value; setSplits(c); }} className="h-9 text-sm" />
-              <Input type="text" inputMode="numeric" placeholder="Tasa" value={s.tasaDestino} onChange={(e) => { const c = [...splits]; c[i].tasaDestino = e.target.value; setSplits(c); }} className="h-9 text-sm" />
-            </div>
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase">Cuenta destino</Label>
+          <div className="flex gap-2 mt-1">
+            <Popover open={accountOpen} onOpenChange={setAccountOpen}>
+              <PopoverTrigger
+                render={<Button variant="outline" role="combobox" className="flex-1 justify-between font-normal">
+                  {selectedAccount ? `${selectedAccount.name} (${selectedAccount.currency})` : "Elegir cuenta..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                </Button>}
+              />
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar cuenta..." />
+                  <CommandList>
+                    <CommandEmpty>No hay cuentas</CommandEmpty>
+                    <CommandGroup>
+                      {accounts.filter((a) => a.type !== "llc_usa").map((a) => (
+                        <CommandItem key={a.id} value={a.name} onSelect={() => { setSelectedAccount(a); setAccountOpen(false); }}>
+                          <Check className={cn("mr-2 h-4 w-4", selectedAccount?.id === a.id ? "opacity-100" : "opacity-0")} />
+                          {a.name} ({a.currency})
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger
+                render={<Button variant="outline" size="icon" title="Nueva cuenta">
+                  <Wallet className="h-4 w-4" />
+                </Button>}
+              />
+              <DialogContent>
+                <DialogHeader><DialogTitle>Nueva cuenta</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs">Nombre</Label>
+                    <Input value={newAccName} onChange={(e) => setNewAccName(e.target.value)} placeholder="Ej: USD Físico 2" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Moneda</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Button size="sm" variant={newAccCurrency === "CUP" ? "default" : "outline"} onClick={() => setNewAccCurrency("CUP")}>CUP</Button>
+                      <Button size="sm" variant={newAccCurrency === "USD" ? "default" : "outline"} onClick={() => setNewAccCurrency("USD")}>USD</Button>
+                    </div>
+                  </div>
+                  <Button className="w-full" onClick={createAccount} disabled={!newAccName}>Crear cuenta</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
-        ))}
+        </div>
       </div>
 
-      <div>
-        <label className="text-xs font-medium text-muted-foreground uppercase">Nota (opcional)</label>
-        <Input value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej: Wire a Miguel" className="mt-1" />
-      </div>
-
-      <div className="text-xs text-muted-foreground">
-        Total split: <span className={`tabular-nums font-semibold ${Math.abs(totalSplitUsd - usd) > 0.01 && usd > 0 ? "text-red-600" : ""}`}>{formatInputNumber(totalSplitUsd)} USD</span>
-        {usd > 0 && Math.abs(totalSplitUsd - usd) > 0.01 && <span className="ml-1 text-red-600">(debe sumar {formatInputNumber(usd)})</span>}
-      </div>
-
-      <Button className="w-full" onClick={submit} disabled={pending || !valid}>
+      <Button className="w-full" onClick={submit} disabled={pending || !buyerName || !usd || !tasaNum || !selectedAccount}>
         {pending ? "Registrando..." : "Registrar wire"}
       </Button>
     </div>

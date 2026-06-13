@@ -90,13 +90,13 @@ async function main() {
 
   // --- Wires (FIFO - consume cuadre_tiradas) ---
   const { createWire } = await import("../lib/domain/wire");
-  const w1 = await createWire({ wireBuyerName: "Miguel", date: day(3), usdAmount: 7000, tasaCup: 660, splits: [{ destinoAccountId: cupF.id, usdAmount: 4500, tasaDestino: 660 }, { destinoAccountId: usdF.id, usdAmount: 2500, tasaDestino: 1.03 }], nota: "Wire grande a Miguel" });
+  const w1 = await createWire({ wireBuyerName: "Miguel", date: day(3), usdAmount: 7000, tasa: 660, monedaDestino: "CUP", fromAccountId: llc.id, toAccountId: cupF.id, nota: "Wire grande a Miguel" });
   console.log(`  Wire #${w1.wireId}: 7,000 USD, ganancia ${Math.round(w1.ganancia)} CUP`);
 
-  const w2 = await createWire({ wireBuyerName: "Leandro", date: day(5), usdAmount: 3500, tasaCup: 650, splits: [{ destinoAccountId: cupF.id, usdAmount: 3500, tasaDestino: 650 }], nota: "Wire a Leandro" });
+  const w2 = await createWire({ wireBuyerName: "Leandro", date: day(5), usdAmount: 3500, tasa: 650, monedaDestino: "CUP", fromAccountId: llc.id, toAccountId: cupF.id, nota: "Wire a Leandro" });
   console.log(`  Wire #${w2.wireId}: 3,500 USD, ganancia ${Math.round(w2.ganancia)} CUP`);
 
-  const w3 = await createWire({ wireBuyerName: "Comprador X", date: day(7), usdAmount: 1500, tasaCup: 665, splits: [{ destinoAccountId: cupF.id, usdAmount: 1000, tasaDestino: 665 }, { destinoAccountId: usdF.id, usdAmount: 500, tasaDestino: 1.03 }], nota: "Wire chico" });
+  const w3 = await createWire({ wireBuyerName: "Comprador X", date: day(7), usdAmount: 1500, tasa: 665, monedaDestino: "CUP", fromAccountId: llc.id, toAccountId: cupF.id, nota: "Wire chico" });
   console.log(`  Wire #${w3.wireId}: 1,500 USD, ganancia ${Math.round(w3.ganancia)} CUP`);
 
   // --- Wire payments ---

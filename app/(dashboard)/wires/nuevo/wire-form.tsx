@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
-import { createWireAction, createAccountAction } from "@/server/actions/wire";
+import { createWireAction } from "@/server/actions/wire";
+import { createAccount } from "@/server/actions/account";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +29,6 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
   const [accountOpen, setAccountOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Acct | null>(null);
   const [newAccName, setNewAccName] = useState("");
-  const [newAccCurrency, setNewAccCurrency] = useState("CUP");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pagado, setPagado] = useState("");
   const [pending, start] = useTransition();
@@ -52,8 +52,11 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
   const submit = () => {
     if (!buyerName || !usd || !tasaNum || !selectedAccount) return;
     start(async () => {
-      const llc = accounts.find((a) => a.type === "llc_usa");
-      if (!llc) return alert("Cuenta LLC USA no encontrada");
+      const llc = selectedAccount;
+      const destino = moneda === "CUP"
+        ? accounts.find((a) => a.type === "efectivo_cup")
+        : accounts.find((a) => a.type === "efectivo_usd");
+      if (!llc || !destino) return alert("Cuenta no encontrada");
       await createWireAction({
         wireBuyerName: buyerName.trim(),
         date: new Date(),
@@ -61,7 +64,7 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
         tasa: tasaNum,
         monedaDestino: moneda,
         fromAccountId: llc.id,
-        toAccountId: selectedAccount.id,
+        toAccountId: destino.id,
         pagado: pagadoEfectivo > 0 ? pagadoEfectivo : undefined,
       });
       setUsdAmount(""); setTasa(""); setBuyerName(""); setMoneda("CUP"); setSelectedAccount(null);
@@ -78,8 +81,8 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
 
   const createAccount = async () => {
     if (!newAccName) return;
-    const row = await createAccountAction({ name: newAccName, currency: newAccCurrency });
-    const newAcct: Acct = { id: row.id, name: newAccName, currency: newAccCurrency, bank: null, type: newAccCurrency === "USD" ? "efectivo_usd" : "efectivo_cup" };
+    const row = await createAccount({ name: newAccName, type: "llc_usa" as never, currency: "USD" as never });
+    const newAcct: Acct = { id: row.id, name: newAccName, currency: "USD", bank: null, type: "llc_usa" };
     accounts.push(newAcct);
     setSelectedAccount(newAcct);
     setDialogOpen(false);
@@ -182,12 +185,12 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
         </div>
 
         <div>
-          <Label className="text-xs text-muted-foreground uppercase">Cuenta destino</Label>
+          <Label className="text-xs text-muted-foreground uppercase">Cuenta Zelle (origen)</Label>
           <div className="flex gap-2 mt-1">
             <Popover open={accountOpen} onOpenChange={setAccountOpen}>
               <PopoverTrigger
                 render={<Button variant="outline" role="combobox" className="flex-1 justify-between font-normal">
-                  {selectedAccount ? `${selectedAccount.name} (${selectedAccount.currency})` : "Elegir cuenta..."}
+                  {selectedAccount ? selectedAccount.name : "Elegir cuenta Zelle..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                 </Button>}
               />
@@ -196,7 +199,7 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
                   <CommandInput placeholder="Buscar cuenta..." />
                   <CommandList>
                     <CommandGroup>
-                      {accounts.filter((a) => a.type !== "llc_usa").map((a) => (
+                      {accounts.filter((a) => a.type === "llc_usa").map((a) => (
                         <CommandItem key={a.id} value={a.name} onSelect={() => { setSelectedAccount(a); setAccountOpen(false); }}>
                           <Check className={cn("mr-2 h-4 w-4", selectedAccount?.id === a.id ? "opacity-100" : "opacity-0")} />
                           {a.name} ({a.currency})
@@ -214,18 +217,11 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
                 </Button>}
               />
               <DialogContent>
-                <DialogHeader><DialogTitle>Nueva cuenta</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Nueva cuenta Zelle</DialogTitle></DialogHeader>
                 <div className="space-y-3">
                   <div>
-                    <Label className="text-xs">Nombre</Label>
-                    <Input value={newAccName} onChange={(e) => setNewAccName(e.target.value)} placeholder="Ej: USD Físico 2" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Moneda</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Button size="sm" variant={newAccCurrency === "CUP" ? "default" : "outline"} onClick={() => setNewAccCurrency("CUP")}>CUP</Button>
-                      <Button size="sm" variant={newAccCurrency === "USD" ? "default" : "outline"} onClick={() => setNewAccCurrency("USD")}>USD</Button>
-                    </div>
+                    <Label className="text-xs">Nombre de la cuenta</Label>
+                    <Input value={newAccName} onChange={(e) => setNewAccName(e.target.value)} placeholder="Ej: LLC Wells Fargo" />
                   </div>
                   <Button className="w-full" onClick={createAccount} disabled={!newAccName}>Crear cuenta</Button>
                 </div>

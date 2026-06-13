@@ -39,14 +39,3 @@ export async function addWirePaymentAction(input: { wireId: number; wireBuyerId:
   revalidatePath(`/wires/${input.wireId}`);
   revalidatePath(`/wire-buyers/${input.wireBuyerId}`);
 }
-
-export async function createAccountAction(input: { name: string; currency: string; bank?: string }) {
-  const [row] = await db.insert(account).values({
-    name: input.name,
-    type: input.currency === "USD" ? "efectivo_usd" : "efectivo_cup",
-    currency: input.currency,
-    bank: input.bank ?? null,
-  }).returning();
-  revalidatePath("/wires/nuevo");
-  return row;
-}

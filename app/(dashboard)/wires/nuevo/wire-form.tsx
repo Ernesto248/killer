@@ -1,7 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { createWireAction } from "@/server/actions/wire";
-import { createAccount } from "@/server/actions/account";
+import { createWireAction, createZelleAccount } from "@/server/actions/wire";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,12 +80,14 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
 
   const createAccount = async () => {
     if (!newAccName) return;
-    const row = await createAccount({ name: newAccName, type: "llc_usa" as never, currency: "USD" as never });
-    const newAcct: Acct = { id: row.id, name: newAccName, currency: "USD", bank: null, type: "llc_usa" };
-    accounts.push(newAcct);
-    setSelectedAccount(newAcct);
-    setDialogOpen(false);
-    setNewAccName("");
+    start(async () => {
+      const row = await createZelleAccount(newAccName);
+      const newAcct: Acct = { id: row.id, name: newAccName, currency: "USD", bank: null, type: "llc_usa" };
+      accounts.push(newAcct);
+      setSelectedAccount(newAcct);
+      setDialogOpen(false);
+      setNewAccName("");
+    });
   };
 
   return (

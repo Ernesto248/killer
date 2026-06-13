@@ -39,3 +39,13 @@ export async function addWirePaymentAction(input: { wireId: number; wireBuyerId:
   revalidatePath(`/wires/${input.wireId}`);
   revalidatePath(`/wire-buyers/${input.wireBuyerId}`);
 }
+
+export async function createZelleAccount(name: string) {
+  const [row] = await db.insert(account).values({
+    name,
+    type: "llc_usa",
+    currency: "USD",
+  }).returning();
+  revalidatePath("/wires/nuevo");
+  return row;
+}

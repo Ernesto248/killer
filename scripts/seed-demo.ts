@@ -91,13 +91,13 @@ async function main() {
   // --- Wires (FIFO - consume cuadre_tiradas) ---
   const { createWire } = await import("../lib/domain/wire");
   const w1 = await createWire({ wireBuyerName: "Miguel", date: day(3), usdAmount: 7000, tasa: 660, monedaDestino: "CUP", fromAccountId: llc.id, toAccountId: cupF.id, nota: "Wire grande a Miguel" });
-  console.log(`  Wire #${w1.wireId}: 7,000 USD, ganancia ${Math.round(w1.ganancia)} CUP`);
+  console.log(`  Wire #${w1.wireId}: 7,000 USD`);
 
   const w2 = await createWire({ wireBuyerName: "Leandro", date: day(5), usdAmount: 3500, tasa: 650, monedaDestino: "CUP", fromAccountId: llc.id, toAccountId: cupF.id, nota: "Wire a Leandro" });
-  console.log(`  Wire #${w2.wireId}: 3,500 USD, ganancia ${Math.round(w2.ganancia)} CUP`);
+  console.log(`  Wire #${w2.wireId}: 3,500 USD`);
 
   const w3 = await createWire({ wireBuyerName: "Comprador X", date: day(7), usdAmount: 1500, tasa: 665, monedaDestino: "CUP", fromAccountId: llc.id, toAccountId: cupF.id, nota: "Wire chico" });
-  console.log(`  Wire #${w3.wireId}: 1,500 USD, ganancia ${Math.round(w3.ganancia)} CUP`);
+  console.log(`  Wire #${w3.wireId}: 1,500 USD`);
 
   // --- Wire payments ---
   await db.insert(wirePayment).values({ wireId: w1.wireId, wireBuyerId: 1, date: day(2), cupAmount: "2000000", note: "Primer abono" });

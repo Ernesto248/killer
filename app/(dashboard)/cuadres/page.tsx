@@ -18,7 +18,6 @@ export default async function CuadresPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Cuadres</h2>
       <CuadresTable rows={rows} />
     </div>
   );

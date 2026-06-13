@@ -24,7 +24,6 @@ export default async function NuevoPage({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Nuevo registro</h2>
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="w-full max-w-sm">
           <TabsTrigger value="cuadre" className="flex-1">Pegar cuadre</TabsTrigger>

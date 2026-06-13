@@ -12,7 +12,6 @@ export default async function NuevoGastoPage() {
   ]);
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Nuevo gasto</h2>
       <GastoForm categories={cats} accounts={accts} />
     </div>
   );

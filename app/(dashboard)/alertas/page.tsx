@@ -9,7 +9,6 @@ export default async function AlertasPage() {
   const active = await db.select().from(alert).where(isNull(alert.dismissedAt)).orderBy(desc(alert.createdAt));
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Alertas</h2>
       {active.length === 0 && <p className="text-muted-foreground">Sin alertas activas.</p>}
       <ul className="space-y-2">
         {active.map((a) => (

@@ -4,17 +4,18 @@ import { createWireAction, createAccountAction } from "@/server/actions/wire";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Check, ChevronsUpDown, Wallet, UserPlus } from "lucide-react";
+import { Check, ChevronsUpDown, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Buyer = { id: number; name: string };
 type Acct = { id: number; name: string; currency: string; bank: string | null; type: string };
 
-function fmt(n: number) { return n > 0 ? n.toLocaleString("es-ES") : ""; }
-function unfmt(s: string) { return Number(s.replace(/[.,\s]/g, "")) || 0; }
+function fmtNum(n: number) {
+  return n > 0 ? n.toLocaleString("es-ES", { useGrouping: true }) : "";
+}
 
 export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer[] }) {
   const [usdAmount, setUsdAmount] = useState("");
@@ -32,10 +33,16 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
   const [pagado, setPagado] = useState("");
   const [pending, start] = useTransition();
 
-  const usd = unfmt(usdAmount);
-  const tasaNum = unfmt(tasa);
-  const total = moneda === "CUP" ? usd * tasaNum : usd * (1 + tasaNum / 100);
-  const pagadoNum = unfmt(pagado);
+  const handleAmount = (raw: string, setter: (v: string) => void) => {
+    const digits = raw.replace(/\D/g, "");
+    if (!digits) { setter(""); return; }
+    setter(Number(digits).toLocaleString("es-ES", { useGrouping: true }));
+  };
+
+  const usd = Number(usdAmount.replace(/\D/g, "")) || 0;
+  const tasaNum = Number(tasa.replace(/\D/g, "")) || 0;
+  const total = moneda === "CUP" ? usd * tasaNum : Math.round(usd * (1 + tasaNum / 100));
+  const pagadoNum = Number(pagado.replace(/\D/g, "")) || 0;
   const pagadoEfectivo = pagadoNum > 0 ? pagadoNum : total;
 
   const filteredBuyers = buyers.filter((b) =>
@@ -62,6 +69,13 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
     });
   };
 
+  const createBuyer = () => {
+    const name = newBuyerName.trim();
+    if (!name) return;
+    setBuyerName(name);
+    setNewBuyerName("");
+  };
+
   const createAccount = async () => {
     if (!newAccName) return;
     const row = await createAccountAction({ name: newAccName, currency: newAccCurrency });
@@ -82,12 +96,7 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
             inputMode="numeric"
             placeholder="10,000"
             value={usdAmount}
-            onChange={(e) => {
-              const raw = e.target.value.replace(/[^\d.,]/g, "");
-              setUsdAmount(raw);
-            }}
-            onBlur={() => { if (usd) setUsdAmount(fmt(usd)); }}
-            onFocus={() => { if (usd) setUsdAmount(String(usd)); }}
+            onChange={(e) => handleAmount(e.target.value, setUsdAmount)}
             className="mt-1"
           />
         </div>
@@ -107,7 +116,7 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
             inputMode="numeric"
             placeholder={moneda === "CUP" ? "680" : "3"}
             value={tasa}
-            onChange={(e) => setTasa(e.target.value.replace(/[^\d.,]/g, ""))}
+            onChange={(e) => handleAmount(e.target.value, setTasa)}
             className="mt-1"
           />
         </div>
@@ -115,20 +124,18 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
         <div className="rounded-lg bg-muted/40 p-3">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground uppercase">{moneda === "CUP" ? "Total CUP" : "Total USD"}</span>
-            <span className="text-lg font-semibold tabular-nums">{fmt(total)}</span>
+            <span className="text-lg font-semibold tabular-nums">{fmtNum(total)}</span>
           </div>
         </div>
 
         <div>
-          <Label className="text-xs text-muted-foreground uppercase">Pagado (dejar vacío = total)</Label>
+          <Label className="text-xs text-muted-foreground uppercase">Pagado (vacío = total)</Label>
           <Input
             type="text"
             inputMode="numeric"
-            placeholder={fmt(total)}
+            placeholder={fmtNum(total)}
             value={pagado}
-            onChange={(e) => setPagado(e.target.value.replace(/[^\d.,]/g, ""))}
-            onBlur={() => { const n = unfmt(pagado); if (n) setPagado(fmt(n)); }}
-            onFocus={() => { const n = unfmt(pagado); if (n) setPagado(String(n)); }}
+            onChange={(e) => handleAmount(e.target.value, setPagado)}
             className="mt-1"
           />
         </div>
@@ -140,49 +147,14 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
           <Popover open={buyerOpen} onOpenChange={setBuyerOpen}>
             <PopoverTrigger
               render={<Button variant="outline" role="combobox" className="w-full justify-between mt-1 font-normal">
-                {buyerName || "Buscar o crear comprador..."}
+                {buyerName || "Buscar comprador..."}
                 <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
               </Button>}
             />
             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
               <Command>
-                <CommandInput placeholder="Buscar..." value={buyerQuery} onValueChange={setBuyerQuery} />
+                <CommandInput placeholder="Buscar comprador..." value={buyerQuery} onValueChange={setBuyerQuery} />
                 <CommandList>
-                  <CommandEmpty>
-                    <div className="p-3 space-y-2">
-                      <p className="text-xs text-muted-foreground">No encontrado</p>
-                      <div className="flex gap-1">
-                        <Input
-                          placeholder="Nombre del comprador"
-                          value={newBuyerName}
-                          onChange={(e) => setNewBuyerName(e.target.value)}
-                          className="h-8 text-xs"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && newBuyerName.trim()) {
-                              setBuyerName(newBuyerName.trim());
-                              setBuyerOpen(false);
-                              setBuyerQuery("");
-                              setNewBuyerName("");
-                            }
-                          }}
-                        />
-                        <Button
-                          size="sm"
-                          className="h-8 text-xs"
-                          onClick={() => {
-                            if (newBuyerName.trim()) {
-                              setBuyerName(newBuyerName.trim());
-                              setBuyerOpen(false);
-                              setBuyerQuery("");
-                              setNewBuyerName("");
-                            }
-                          }}
-                        >
-                          Crear
-                        </Button>
-                      </div>
-                    </div>
-                  </CommandEmpty>
                   <CommandGroup>
                     {filteredBuyers.map((b) => (
                       <CommandItem key={b.id} value={b.name} onSelect={() => { setBuyerName(b.name); setBuyerOpen(false); setBuyerQuery(""); }}>
@@ -195,6 +167,18 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
               </Command>
             </PopoverContent>
           </Popover>
+          <div className="flex gap-1 mt-1.5">
+            <Input
+              placeholder="Nuevo comprador"
+              value={newBuyerName}
+              onChange={(e) => setNewBuyerName(e.target.value)}
+              className="h-9 text-sm flex-1"
+              onKeyDown={(e) => { if (e.key === "Enter") createBuyer(); }}
+            />
+            <Button size="sm" className="h-9" onClick={createBuyer} disabled={!newBuyerName.trim()}>
+              Crear
+            </Button>
+          </div>
         </div>
 
         <div>

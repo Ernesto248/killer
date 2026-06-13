@@ -2,6 +2,7 @@
 import { createWire } from "@/lib/domain/wire";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { db } from "@/lib/db";
 
 export async function createWireAction(input: Parameters<typeof createWire>[0]) {
   const result = await createWire(input);

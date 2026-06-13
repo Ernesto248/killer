@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { cuadreTirada, wire, wireBuyer, wireBuyerBalance, account, accountMovement } from "@/lib/db/schema";
+import { cuadreTirada, wire, wireBuyer, wireBuyerBalance, wirePayment, account, accountMovement } from "@/lib/db/schema";
 import { eq, isNull, asc, sql } from "drizzle-orm";
 
 export type CreateWireInput = {
@@ -10,6 +10,7 @@ export type CreateWireInput = {
   monedaDestino: "CUP" | "USD";
   fromAccountId: number;
   toAccountId: number;
+  pagado?: number;
   nota?: string;
 };
 
@@ -98,6 +99,26 @@ export async function createWire(input: CreateWireInput) {
         target: wireBuyerBalance.wireBuyerId,
         set: { balanceCup: sql`${wireBuyerBalance.balanceCup} + ${cupTotal}`, updatedAt: new Date() },
       });
+
+    if (input.pagado && input.pagado > 0) {
+      await tx.insert(wirePayment).values({
+        wireId: w.id, wireBuyerId: wb.id,
+        date: input.date,
+        cupAmount: String(input.pagado),
+        note: "Pago inicial",
+      });
+      await tx.update(wireBuyerBalance)
+        .set({ balanceCup: sql`${wireBuyerBalance.balanceCup} - ${input.pagado}`, updatedAt: new Date() })
+        .where(eq(wireBuyerBalance.wireBuyerId, wb.id));
+      const [cupAcc] = await tx.select().from(account).where(eq(account.type, "efectivo_cup"));
+      if (cupAcc) {
+        await tx.insert(accountMovement).values({
+          accountId: cupAcc.id, date: input.date,
+          amount: String(input.pagado), currency: "CUP",
+          refType: "wire_payment", refId: w.id, note: "Pago inicial",
+        });
+      }
+    }
 
     return { wireId: w.id, ganancia, cupTotal };
   });

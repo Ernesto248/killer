@@ -13,6 +13,9 @@ import { cn } from "@/lib/utils";
 type Buyer = { id: number; name: string };
 type Acct = { id: number; name: string; currency: string; bank: string | null; type: string };
 
+function fmt(n: number) { return n > 0 ? n.toLocaleString("es-ES") : ""; }
+function unfmt(s: string) { return Number(s.replace(/[.,\s]/g, "")) || 0; }
+
 export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer[] }) {
   const [usdAmount, setUsdAmount] = useState("");
   const [tasa, setTasa] = useState("");
@@ -20,18 +23,20 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
   const [buyerOpen, setBuyerOpen] = useState(false);
   const [buyerName, setBuyerName] = useState("");
   const [buyerQuery, setBuyerQuery] = useState("");
+  const [newBuyerName, setNewBuyerName] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Acct | null>(null);
-  const [newBank, setNewBank] = useState("");
-  const [newUser, setNewUser] = useState("");
   const [newAccName, setNewAccName] = useState("");
   const [newAccCurrency, setNewAccCurrency] = useState("CUP");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [pagado, setPagado] = useState("");
   const [pending, start] = useTransition();
 
-  const usd = Number(usdAmount.replace(/[,\s]/g, "")) || 0;
-  const tasaNum = Number(tasa.replace(/[,\s]/g, "")) || 0;
+  const usd = unfmt(usdAmount);
+  const tasaNum = unfmt(tasa);
   const total = moneda === "CUP" ? usd * tasaNum : usd * (1 + tasaNum / 100);
+  const pagadoNum = unfmt(pagado);
+  const pagadoEfectivo = pagadoNum > 0 ? pagadoNum : total;
 
   const filteredBuyers = buyers.filter((b) =>
     !buyerQuery || b.name.toLowerCase().includes(buyerQuery.toLowerCase())
@@ -50,15 +55,16 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
         monedaDestino: moneda,
         fromAccountId: llc.id,
         toAccountId: selectedAccount.id,
+        pagado: pagadoEfectivo > 0 ? pagadoEfectivo : undefined,
       });
-      setUsdAmount(""); setTasa(""); setBuyerName(""); setMoneda("CUP"); setSelectedAccount(null); setBuyerQuery("");
+      setUsdAmount(""); setTasa(""); setBuyerName(""); setMoneda("CUP"); setSelectedAccount(null);
+      setBuyerQuery(""); setPagado(""); setNewBuyerName("");
     });
   };
 
   const createAccount = async () => {
     if (!newAccName) return;
     const row = await createAccountAction({ name: newAccName, currency: newAccCurrency });
-    // Add to local list
     const newAcct: Acct = { id: row.id, name: newAccName, currency: newAccCurrency, bank: null, type: newAccCurrency === "USD" ? "efectivo_usd" : "efectivo_cup" };
     accounts.push(newAcct);
     setSelectedAccount(newAcct);
@@ -76,7 +82,12 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
             inputMode="numeric"
             placeholder="10,000"
             value={usdAmount}
-            onChange={(e) => setUsdAmount(e.target.value)}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/[^\d.,]/g, "");
+              setUsdAmount(raw);
+            }}
+            onBlur={() => { if (usd) setUsdAmount(fmt(usd)); }}
+            onFocus={() => { if (usd) setUsdAmount(String(usd)); }}
             className="mt-1"
           />
         </div>
@@ -96,16 +107,30 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
             inputMode="numeric"
             placeholder={moneda === "CUP" ? "680" : "3"}
             value={tasa}
-            onChange={(e) => setTasa(e.target.value)}
+            onChange={(e) => setTasa(e.target.value.replace(/[^\d.,]/g, ""))}
             className="mt-1"
           />
         </div>
 
-        <div className="rounded-lg bg-muted/40 p-3 text-center">
-          <div className="text-xs text-muted-foreground uppercase">Total</div>
-          <div className="text-xl font-semibold tabular-nums">
-            {total > 0 ? total.toLocaleString() : "—"} {moneda}
+        <div className="rounded-lg bg-muted/40 p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground uppercase">{moneda === "CUP" ? "Total CUP" : "Total USD"}</span>
+            <span className="text-lg font-semibold tabular-nums">{fmt(total)}</span>
           </div>
+        </div>
+
+        <div>
+          <Label className="text-xs text-muted-foreground uppercase">Pagado (dejar vacío = total)</Label>
+          <Input
+            type="text"
+            inputMode="numeric"
+            placeholder={fmt(total)}
+            value={pagado}
+            onChange={(e) => setPagado(e.target.value.replace(/[^\d.,]/g, ""))}
+            onBlur={() => { const n = unfmt(pagado); if (n) setPagado(fmt(n)); }}
+            onFocus={() => { const n = unfmt(pagado); if (n) setPagado(String(n)); }}
+            className="mt-1"
+          />
         </div>
       </div>
 
@@ -115,7 +140,7 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
           <Popover open={buyerOpen} onOpenChange={setBuyerOpen}>
             <PopoverTrigger
               render={<Button variant="outline" role="combobox" className="w-full justify-between mt-1 font-normal">
-                {buyerName || "Buscar comprador..."}
+                {buyerName || "Buscar o crear comprador..."}
                 <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
               </Button>}
             />
@@ -124,8 +149,38 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
                 <CommandInput placeholder="Buscar..." value={buyerQuery} onValueChange={setBuyerQuery} />
                 <CommandList>
                   <CommandEmpty>
-                    <div className="p-2 text-sm text-muted-foreground">
-                      No encontrado. Escribí el nombre y se creará al guardar.
+                    <div className="p-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">No encontrado</p>
+                      <div className="flex gap-1">
+                        <Input
+                          placeholder="Nombre del comprador"
+                          value={newBuyerName}
+                          onChange={(e) => setNewBuyerName(e.target.value)}
+                          className="h-8 text-xs"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && newBuyerName.trim()) {
+                              setBuyerName(newBuyerName.trim());
+                              setBuyerOpen(false);
+                              setBuyerQuery("");
+                              setNewBuyerName("");
+                            }
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => {
+                            if (newBuyerName.trim()) {
+                              setBuyerName(newBuyerName.trim());
+                              setBuyerOpen(false);
+                              setBuyerQuery("");
+                              setNewBuyerName("");
+                            }
+                          }}
+                        >
+                          Crear
+                        </Button>
+                      </div>
                     </div>
                   </CommandEmpty>
                   <CommandGroup>
@@ -156,7 +211,6 @@ export function WireForm({ accounts, buyers }: { accounts: Acct[]; buyers: Buyer
                 <Command>
                   <CommandInput placeholder="Buscar cuenta..." />
                   <CommandList>
-                    <CommandEmpty>No hay cuentas</CommandEmpty>
                     <CommandGroup>
                       {accounts.filter((a) => a.type !== "llc_usa").map((a) => (
                         <CommandItem key={a.id} value={a.name} onSelect={() => { setSelectedAccount(a); setAccountOpen(false); }}>

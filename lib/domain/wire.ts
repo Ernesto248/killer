@@ -50,11 +50,22 @@ export async function createWire(input: CreateWireInput) {
       note: `Wire #${w.id}`,
     });
 
-    await tx.insert(wireBuyerBalance).values({ wireBuyerId: wb.id, balanceCup: String(cupTotal) })
-      .onConflictDoUpdate({
-        target: wireBuyerBalance.wireBuyerId,
-        set: { balanceCup: sql`${wireBuyerBalance.balanceCup} + ${cupTotal}`, updatedAt: new Date() },
-      });
+    await tx.insert(wireBuyerBalance).values({
+      wireBuyerId: wb.id,
+      balanceCup: input.monedaDestino === "CUP" ? String(cupTotal) : "0",
+      balanceUsd: input.monedaDestino === "USD" ? String(cupTotal) : "0",
+    }).onConflictDoUpdate({
+      target: wireBuyerBalance.wireBuyerId,
+      set: {
+        balanceCup: input.monedaDestino === "CUP"
+          ? sql`${wireBuyerBalance.balanceCup} + ${cupTotal}`
+          : wireBuyerBalance.balanceCup,
+        balanceUsd: input.monedaDestino === "USD"
+          ? sql`${wireBuyerBalance.balanceUsd} + ${cupTotal}`
+          : wireBuyerBalance.balanceUsd,
+        updatedAt: new Date(),
+      },
+    });
 
     if (input.pagado && input.pagado > 0) {
       await tx.insert(wirePayment).values({

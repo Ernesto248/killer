@@ -150,6 +150,7 @@ export const wirePayment = pgTable("wire_payment", {
 export const wireBuyerBalance = pgTable("wire_buyer_balance", {
   wireBuyerId: integer("wire_buyer_id").primaryKey().references(() => wireBuyer.id),
   balanceCup: numeric("balance_cup", { precision: 18, scale: 2 }).notNull().default("0"),
+  balanceUsd: numeric("balance_usd", { precision: 18, scale: 2 }).notNull().default("0"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

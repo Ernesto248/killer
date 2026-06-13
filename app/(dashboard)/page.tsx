@@ -8,20 +8,18 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+function fmt(n: number) { return n.toLocaleString("es-ES", { useGrouping: true }); }
+
 export default async function Dashboard() {
   const [series, activeAlerts, tasas, accs, mvBalances, rBalances, wBalances, labels] = await Promise.all([
     db.select().from(dailySnapshot).orderBy(dailySnapshot.date),
     db.select().from(alert).where(isNull(alert.dismissedAt)).limit(10),
     fetchTasas(),
     db.select().from(account),
-    db.select({ accountId: accountMovement.accountId, total: sql<number>`COALESCE(SUM(amount::numeric), 0)` })
-      .from(accountMovement)
-      .groupBy(accountMovement.accountId),
+    db.select({ accountId: accountMovement.accountId, total: sql<number>`COALESCE(SUM(amount::numeric), 0)` }).from(accountMovement).groupBy(accountMovement.accountId),
     db.select().from(remeseroBalance),
     db.select().from(wireBuyerBalance),
-    db.select({ remeseroId: cuadre.remeseroId, label: cuadre.balanceFinalLabel })
-      .from(cuadre)
-      .orderBy(desc(cuadre.date)),
+    db.select({ remeseroId: cuadre.remeseroId, label: cuadre.balanceFinalLabel }).from(cuadre).orderBy(desc(cuadre.date)),
   ]);
 
   void computeDailySnapshot(new Date());
@@ -31,69 +29,53 @@ export default async function Dashboard() {
   const cupBalance = Number(mvBalances.find((b) => b.accountId === cupAcc?.id)?.total ?? 0);
   const usdBalance = Number(mvBalances.find((b) => b.accountId === usdAcc?.id)?.total ?? 0);
 
-  // Latest cuadre label per remesero
   const labelMap = new Map<number, string>();
-  for (const l of labels) {
-    if (!labelMap.has(l.remeseroId)) labelMap.set(l.remeseroId, l.label ?? "");
-  }
+  for (const l of labels) { if (!labelMap.has(l.remeseroId)) labelMap.set(l.remeseroId, l.label ?? ""); }
 
-  // CUP counterparty net
-  let nosDebenCup = 0;
-  let debemosCup = 0;
+  let nosDebenCup = 0; let debemosCup = 0;
   for (const rb of rBalances) {
-    const label = labelMap.get(rb.remeseroId);
     const cup = Number(rb.balanceCup ?? 0);
-    if (label === "fondo") {
-      nosDebenCup += cup;
-    } else if (label === "deuda") {
-      debemosCup += cup;
-    }
+    if (labelMap.get(rb.remeseroId) === "fondo") nosDebenCup += cup;
+    else if (labelMap.get(rb.remeseroId) === "deuda") debemosCup += cup;
   }
-  for (const wb of wBalances) {
-    const cup = Number(wb.balanceCup ?? 0);
-    if (cup > 0) nosDebenCup += cup;
-  }
-  const netoCup = nosDebenCup - debemosCup;
+  const remeserosCup = nosDebenCup - debemosCup;
 
-  // USD counterparty net
-  let nosDebenUsd = 0;
-  let debemosUsd = 0;
+  let nosDebenUsd = 0; let debemosUsd = 0;
   for (const rb of rBalances) {
     const usd = Number(rb.balanceUsd ?? 0);
     if (usd > 0) debemosUsd += usd;
     else nosDebenUsd += Math.abs(usd);
   }
-  const netoUsd = nosDebenUsd - debemosUsd;
+  const remeserosUsd = nosDebenUsd - debemosUsd;
+
+  let wireCup = 0; let wireUsd = 0;
+  for (const wb of wBalances) {
+    wireCup += Number(wb.balanceCup ?? 0);
+    wireUsd += Number(wb.balanceUsd ?? 0);
+  }
+
+  const cards = [
+    { label: "CUP Físico", value: cupBalance, suffix: "CUP" },
+    { label: "USD Físico", value: usdBalance, suffix: "USD" },
+    { label: "Remeseros CUP", value: remeserosCup, suffix: "CUP" },
+    { label: "Remeseros USD", value: remeserosUsd, suffix: "USD" },
+    { label: "Wires pendientes CUP", value: wireCup, suffix: "CUP" },
+    { label: "Wires pendientes USD", value: wireUsd, suffix: "USD" },
+  ];
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Dashboard</h2>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className={cn("card-apple p-4", cupBalance >= 0 ? "bg-green-50/40" : "bg-red-50/40")}>
-          <div className="text-xs text-muted-foreground uppercase tracking-wide">CUP Físico</div>
-          <div className={cn("text-lg sm:text-2xl tabular-nums font-semibold mt-1", cupBalance >= 0 ? "text-green-600" : "text-red-600")}>
-            {cupBalance.toLocaleString()} CUP
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        {cards.map((c) => (
+          <div key={c.label} className={cn("card-apple p-4", c.value >= 0 ? "bg-green-50/40" : "bg-red-50/40")}>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">{c.label}</div>
+            <div className={cn("text-lg sm:text-2xl tabular-nums font-semibold mt-1", c.value >= 0 ? "text-green-600" : "text-red-600")}>
+              {c.value >= 0 ? "+" : ""}{fmt(c.value)} {c.suffix}
+            </div>
           </div>
-        </div>
-        <div className={cn("card-apple p-4", usdBalance >= 0 ? "bg-green-50/40" : "bg-red-50/40")}>
-          <div className="text-xs text-muted-foreground uppercase tracking-wide">USD Físico</div>
-          <div className={cn("text-lg sm:text-2xl tabular-nums font-semibold mt-1", usdBalance >= 0 ? "text-green-600" : "text-red-600")}>
-            {usdBalance.toLocaleString()} USD
-          </div>
-        </div>
-        <div className={cn("card-apple p-4", netoCup >= 0 ? "bg-green-50/40" : "bg-red-50/40")}>
-          <div className="text-xs text-muted-foreground uppercase tracking-wide">Nos deben CUP</div>
-          <div className={cn("text-lg sm:text-2xl tabular-nums font-semibold mt-1", netoCup >= 0 ? "text-green-600" : "text-red-600")}>
-            {netoCup >= 0 ? "+" : ""}{netoCup.toLocaleString()} CUP
-          </div>
-        </div>
-        <div className={cn("card-apple p-4", netoUsd >= 0 ? "bg-green-50/40" : "bg-red-50/40")}>
-          <div className="text-xs text-muted-foreground uppercase tracking-wide">Nos deben USD</div>
-          <div className={cn("text-lg sm:text-2xl tabular-nums font-semibold mt-1", netoUsd >= 0 ? "text-green-600" : "text-red-600")}>
-            {netoUsd >= 0 ? "+" : ""}{netoUsd.toLocaleString()} USD
-          </div>
-        </div>
+        ))}
       </div>
 
       {tasas && (

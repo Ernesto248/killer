@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { wire, wireBuyer } from "@/lib/db/schema";
+import { wire, wireBuyer, wirePayment } from "@/lib/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -7,19 +7,29 @@ import { Plus } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function WiresPage() {
-  const rows = await db
-    .select({
-      id: wire.id,
-      date: wire.date,
-      buyerName: wireBuyer.name,
-      usd: wire.usdAmount,
-      tasa: wire.tasaCup,
-      cupTotal: wire.cupTotal,
-      pagado: sql<number>`COALESCE((SELECT SUM(cup_amount::numeric) FROM wire_payment WHERE wire_payment.wire_id = wire.id), 0)::text`,
-    })
-    .from(wire)
-    .leftJoin(wireBuyer, eq(wireBuyer.id, wire.wireBuyerId))
-    .orderBy(desc(wire.date));
+  const [rows, paymentSums] = await Promise.all([
+    db
+      .select({
+        id: wire.id,
+        date: wire.date,
+        buyerName: wireBuyer.name,
+        usd: wire.usdAmount,
+        tasa: wire.tasaCup,
+        cupTotal: wire.cupTotal,
+      })
+      .from(wire)
+      .leftJoin(wireBuyer, eq(wireBuyer.id, wire.wireBuyerId))
+      .orderBy(desc(wire.date)),
+    db
+      .select({
+        wireId: wirePayment.wireId,
+        total: sql<number>`COALESCE(sum(cup_amount::numeric), 0)`,
+      })
+      .from(wirePayment)
+      .groupBy(wirePayment.wireId),
+  ]);
+
+  const paymentMap = new Map(paymentSums.map((p) => [p.wireId, Number(p.total ?? 0)]));
 
   return (
     <div className="space-y-4">
@@ -50,7 +60,7 @@ export default async function WiresPage() {
               <tbody>
                 {rows.map((r) => {
                   const cupTotal = Number(r.cupTotal ?? 0);
-                  const pagado = Number(r.pagado ?? 0);
+                  const pagado = paymentMap.get(r.id) ?? 0;
                   const pendiente = cupTotal - pagado;
                   return (
                     <tr key={r.id} className="border-b border-black/5 hover:bg-accent/50 transition-colors">

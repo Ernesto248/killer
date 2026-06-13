@@ -1,10 +1,9 @@
 "use server";
 import { registrarCuadre } from "@/lib/domain/cuadre";
-import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function createCuadreAction(input: Parameters<typeof registrarCuadre>[0]) {
   const result = await registrarCuadre(input);
-  revalidatePath("/remeseros");
-  revalidatePath("/");
+  redirect("/remeseros");
   return result;
 }

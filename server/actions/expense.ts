@@ -1,9 +1,9 @@
 "use server";
 import { createExpense } from "@/lib/domain/expense";
-import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function createExpenseAction(input: Parameters<typeof createExpense>[0]) {
   const r = await createExpense(input);
-  revalidatePath("/gastos");
+  redirect("/gastos");
   return r;
 }

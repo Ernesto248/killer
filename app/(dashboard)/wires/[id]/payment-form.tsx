@@ -3,14 +3,15 @@ import { useState, useTransition } from "react";
 import { addWirePaymentAction } from "@/server/actions/wire";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { formatInputNumber, parseInputNumber } from "@/lib/format";
+
+function fmt(n: number) { return n > 0 ? n.toLocaleString("es-ES", { useGrouping: true }) : ""; }
 
 export function PaymentForm({ wireId, wireBuyerId }: { wireId: number; wireBuyerId: number }) {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
 
-  const parsedAmount = parseInputNumber(amount);
+  const parsedAmount = Number(amount.replace(/\D/g, "")) || 0;
 
   return (
     <div className="card-apple p-4">
@@ -23,28 +24,21 @@ export function PaymentForm({ wireId, wireBuyerId }: { wireId: number; wireBuyer
             inputMode="numeric"
             placeholder="50,000"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => { const d = e.target.value.replace(/\D/g, ""); setAmount(d ? Number(d).toLocaleString("es-ES", { useGrouping: true }) : ""); }}
             className="mt-1"
           />
         </div>
         <div className="flex-[2] min-w-[200px]">
           <label className="text-xs text-muted-foreground">Nota</label>
-          <Input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Ej: primer abono"
-            className="mt-1"
-          />
+          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ej: primer abono" className="mt-1" />
         </div>
         <Button
           type="submit"
           disabled={pending || parsedAmount <= 0}
-          onClick={() => {
-            start(async () => {
-              await addWirePaymentAction({ wireId, wireBuyerId, date: new Date(), cupAmount: parsedAmount, note: note || undefined });
-              setAmount(""); setNote("");
-            });
-          }}
+          onClick={() => start(async () => {
+            await addWirePaymentAction({ wireId, wireBuyerId, date: new Date(), cupAmount: parsedAmount, note: note || undefined });
+            setAmount(""); setNote("");
+          })}
         >
           {pending ? "..." : "Registrar pago"}
         </Button>

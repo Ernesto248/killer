@@ -11,7 +11,7 @@ const items = [
   { href: "/cuadres", label: "Cuadres", icon: ClipboardList },
   { href: "/wires", label: "Wires", icon: TrendingUp },
   { href: "/wire-buyers", label: "Wire Buyers", icon: UserCheck },
-  { href: "/tesoreria/movimiento", label: "Tesorería", icon: ArrowRightLeft },
+  { href: "/tesoreria/movimiento", label: "Compra/Venta USD", icon: ArrowRightLeft },
   { href: "/gastos", label: "Gastos", icon: Receipt },
   { href: "/alertas", label: "Alertas", icon: Bell },
   { href: "/config", label: "Config", icon: Settings },

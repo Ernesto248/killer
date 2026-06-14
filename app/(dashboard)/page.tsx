@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { dailySnapshot, alert, account, accountMovement, remeseroBalance, wireBuyerBalance, cuadre } from "@/lib/db/schema";
-import { desc, isNull, sql } from "drizzle-orm";
+import { desc, isNull, sql, gte, and } from "drizzle-orm";
 import { computeDailySnapshot } from "@/lib/domain/snapshot";
 import { fetchTasas } from "@/lib/fetch-tasas";
 import { CapitalEvolution } from "@/components/charts/capital-evolution";
@@ -10,9 +10,27 @@ export const dynamic = "force-dynamic";
 
 function fmt(n: number) { return n.toLocaleString("es-ES", { useGrouping: true }); }
 
-export default async function Dashboard() {
-  const [series, activeAlerts, tasas, accs, mvBalances, rBalances, wBalances, labels] = await Promise.all([
-    db.select().from(dailySnapshot).orderBy(dailySnapshot.date),
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "ahora";
+  if (mins < 60) return `hace ${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `hace ${hrs}h`;
+  return `hace ${Math.floor(hrs / 24)}d`;
+}
+
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ chart?: string }>;
+}) {
+  const sp = await searchParams;
+  const chartMode = sp.chart === "usd" ? "usd" : "cup";
+
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [activeAlerts, tasas, accs, mvBalances, rBalances, wBalances, labels, weekMovs] = await Promise.all([
     db.select().from(alert).where(isNull(alert.dismissedAt)).limit(10),
     fetchTasas(),
     db.select().from(account),
@@ -20,6 +38,9 @@ export default async function Dashboard() {
     db.select().from(remeseroBalance),
     db.select().from(wireBuyerBalance),
     db.select({ remeseroId: cuadre.remeseroId, label: cuadre.balanceFinalLabel }).from(cuadre).orderBy(desc(cuadre.date)),
+    db.select({ date: accountMovement.date, amount: accountMovement.amount, accountId: accountMovement.accountId, currency: accountMovement.currency })
+      .from(accountMovement)
+      .where(gte(accountMovement.date, weekAgo)),
   ]);
 
   void computeDailySnapshot(new Date());
@@ -59,13 +80,28 @@ export default async function Dashboard() {
     { label: "USD Físico", value: usdBalance, suffix: "USD" },
     { label: "Remeseros CUP", value: remeserosCup, suffix: "CUP" },
     { label: "Remeseros USD", value: remeserosUsd, suffix: "USD" },
-    { label: "Wires pendientes CUP", value: wireCup, suffix: "CUP" },
-    { label: "Wires pendientes USD", value: wireUsd, suffix: "USD" },
+    { label: "Wires pend. CUP", value: wireCup, suffix: "CUP" },
+    { label: "Wires pend. USD", value: wireUsd, suffix: "USD" },
   ];
+
+  // Weekly balance chart data
+  const targetId = chartMode === "usd" ? usdAcc?.id : cupAcc?.id;
+  const dailyMap = new Map<string, number>();
+  for (const m of weekMovs) {
+    if (m.accountId !== targetId) continue;
+    const d = m.date.toISOString().slice(0, 10);
+    dailyMap.set(d, (dailyMap.get(d) ?? 0) + Number(m.amount));
+  }
+  let cumulative = 0;
+  const chartData: Array<{ date: string; value: number }> = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    cumulative += dailyMap.get(d) ?? 0;
+    chartData.push({ date: d.slice(5), value: Math.round(cumulative) });
+  }
 
   return (
     <div className="space-y-6">
-
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {cards.map((c) => (
           <div key={c.label} className={cn("card-apple p-4", c.value >= 0 ? "bg-green-50/40" : "bg-red-50/40")}>
@@ -84,21 +120,29 @@ export default async function Dashboard() {
             <div className="card-apple p-4">
               <div className="text-xs text-muted-foreground uppercase tracking-wide">Dólar (CUP)</div>
               <div className="text-lg sm:text-2xl tabular-nums font-semibold mt-1">{tasas.usd?.toLocaleString() ?? "—"} CUP</div>
-              <div className="text-xs text-muted-foreground mt-1">Actualizado {tasas.updatedAt}</div>
+              <div className="text-xs text-muted-foreground mt-1">{timeAgo(tasas.ts)}</div>
             </div>
             <div className="card-apple p-4">
               <div className="text-xs text-muted-foreground uppercase tracking-wide">Euro (CUP)</div>
               <div className="text-lg sm:text-2xl tabular-nums font-semibold mt-1">{tasas.eur?.toLocaleString() ?? "—"} CUP</div>
-              <div className="text-xs text-muted-foreground mt-1">Actualizado {tasas.updatedAt}</div>
+              <div className="text-xs text-muted-foreground mt-1">{timeAgo(tasas.ts)}</div>
             </div>
           </div>
         </>
       )}
 
       <section>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-2">Evolución</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Última semana — {chartMode === "usd" ? "USD" : "CUP"} Físico
+          </h3>
+          <div className="flex gap-1">
+            <a href="?chart=cup" className={cn("rounded-lg px-2 py-1 text-xs font-medium transition-colors", chartMode === "cup" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent")}>CUP</a>
+            <a href="?chart=usd" className={cn("rounded-lg px-2 py-1 text-xs font-medium transition-colors", chartMode === "usd" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent")}>USD</a>
+          </div>
+        </div>
         <div className="card-apple p-4">
-          <CapitalEvolution data={series.map((s) => ({ date: s.date.toISOString().slice(0, 10), value: Number(s.capitalNetoUsd) }))} />
+          <CapitalEvolution data={chartData} />
         </div>
       </section>
 

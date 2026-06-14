@@ -1,7 +1,7 @@
-let cached: { data: { usd: number; eur: number; updatedAt: string } | null; ts: number } | null = null;
+let cached: { data: { usd: number; eur: number; updatedAt: string; ts: string } | null; ts: number } | null = null;
 const TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
-export async function fetchTasas(): Promise<{ usd: number; eur: number; updatedAt: string } | null> {
+export async function fetchTasas(): Promise<{ usd: number; eur: number; updatedAt: string; ts: string } | null> {
   if (cached && Date.now() - cached.ts < TTL_MS) {
     return cached.data;
   }
@@ -27,6 +27,7 @@ export async function fetchTasas(): Promise<{ usd: number; eur: number; updatedA
       usd: json.tasas?.USD ?? null,
       eur: json.tasas?.ECU ?? null,
       updatedAt: `${json.date} ${String(json.hour).padStart(2, "0")}:${String(json.minutes).padStart(2, "0")}`,
+      ts: new Date(`${json.date}T${String(json.hour).padStart(2, "0")}:${String(json.minutes).padStart(2, "0")}:00`).toISOString(),
     };
     if (data.usd == null && data.eur == null) return null;
     cached = { data, ts: Date.now() };

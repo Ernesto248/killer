@@ -24,7 +24,7 @@ export function GastoForm({ categories }: { categories: { id: number; name: stri
       <div className="card-apple p-4 space-y-4">
         <div>
           <Label className="text-xs text-muted-foreground uppercase">Categoría</Label>
-          <Select value={categoryId} onValueChange={setCategoryId}>
+          <Select value={categoryId} onValueChange={(v) => v && setCategoryId(v)}>
             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
             <SelectContent>
               {categories.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}

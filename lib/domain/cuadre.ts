@@ -5,10 +5,10 @@ import { eq } from "drizzle-orm";
 export type CuadreInput = {
   remeseroName: string;
   date: Date;
-  balanceInicialCup: number;
+  balanceInicialCup?: number;
   pagadoCup: number;
-  pendientes: { usd: number; tasa: number };
-  tirado: Array<{ usd: number; tasa: number }>;
+  pendientes?: { usd: number; tasa: number };
+  tirado?: Array<{ usd: number; tasa: number }>;
   balanceFinalCup: number;
   balanceFinalLabel: "deuda" | "fondo";
   rawText: string;
@@ -27,17 +27,17 @@ export async function registrarCuadre(input: CuadreInput) {
     const [c] = await tx.insert(cuadre).values({
       remeseroId: r.id,
       date: input.date,
-      balanceInicialCup: String(input.balanceInicialCup),
+      balanceInicialCup: String(input.balanceInicialCup ?? 0),
       pagadoCup: String(input.pagadoCup),
-      pendientesUsd: String(input.pendientes.usd),
-      pendientesTasa: input.pendientes.tasa ? String(input.pendientes.tasa) : null,
-      tiradoItems: input.tirado.map((t) => ({ usd: String(t.usd), tasa: String(t.tasa) })),
+      pendientesUsd: String(input.pendientes?.usd ?? 0),
+      pendientesTasa: input.pendientes?.tasa ? String(input.pendientes.tasa) : null,
+      tiradoItems: (input.tirado ?? []).map((t) => ({ usd: String(t.usd), tasa: String(t.tasa) })),
       balanceFinalCup: String(input.balanceFinalCup),
       balanceFinalLabel: input.balanceFinalLabel,
       rawText: input.rawText,
     }).returning();
 
-    if (input.tirado.length > 0) {
+    if (input.tirado && input.tirado.length > 0) {
       await tx.insert(cuadreTirada).values(
         input.tirado.map((t) => ({
           cuadreId: c.id,

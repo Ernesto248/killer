@@ -44,7 +44,7 @@ export function CuadreTab({ remeseros, initialRemesero }: { remeseros: Array<{ i
   };
 
   const submit = () => {
-    if (!selectedRemesero || !final) return;
+    if (!selectedRemesero || finalRaw === "") return;
     start(async () => {
       await createCuadreAction({
         remeseroName: selectedRemesero,
@@ -136,7 +136,7 @@ export function CuadreTab({ remeseros, initialRemesero }: { remeseros: Array<{ i
         )}
       </div>
 
-      <Button className="w-full" onClick={submit} disabled={pending || !selectedRemesero || !final}>
+      <Button className="w-full" onClick={submit} disabled={pending || !selectedRemesero || finalRaw === ""}>
         {pending ? "Registrando..." : "Registrar cuadre"}
       </Button>
     </div>

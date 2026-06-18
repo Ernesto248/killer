@@ -47,7 +47,7 @@ export async function updateExternalDebt(id: number, input: { name?: string; amo
   if (input.amount !== undefined) data.amount = String(input.amount);
   if (input.currency !== undefined) data.currency = input.currency;
   if (input.direction !== undefined) data.direction = input.direction;
-  if (input.notes !== undefined) data.notes = input.notes;
+    if (input.notes !== undefined) data.notes = input.notes || null;
   await db.update(externalDebt).set(data).where(eq(externalDebt.id, id));
   revalidatePath("/");
   revalidatePath("/deudas");

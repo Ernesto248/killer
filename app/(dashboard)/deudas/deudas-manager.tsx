@@ -46,7 +46,7 @@ export function DeudasManager({ debts }: { debts: Debt[] }) {
     const n = Number(editAmount.replace(/\D/g, "")) || 0;
     if (!editName || !n) return;
     start(async () => {
-      await updateExternalDebt(editingId!, { name: editName, amount: n, currency: editCurrency, direction: editDirection, notes: editNotes || null });
+      await updateExternalDebt(editingId!, { name: editName, amount: n, currency: editCurrency, direction: editDirection, notes: editNotes || undefined });
       setEditingId(null);
     });
   };

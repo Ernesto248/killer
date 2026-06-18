@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { wire, wireBuyer, wireBuyerBalance, wirePayment, account, accountMovement } from "@/lib/db/schema";
+import { wire, wireBuyer, wireBuyerBalance, wirePayment, account } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 export type CreateWireInput = {
@@ -39,17 +39,6 @@ export async function createWire(input: CreateWireInput) {
       nota: input.nota,
     }).returning();
 
-    await tx.insert(accountMovement).values({
-      accountId: fromAcc.id, date: input.date,
-      amount: String(-input.usdAmount), currency: "USD", refType: "wire", refId: w.id,
-    });
-    await tx.insert(accountMovement).values({
-      accountId: toAcc.id, date: input.date,
-      amount: String(destinoAmount),
-      currency: toAcc.currency, refType: "wire", refId: w.id,
-      note: `Wire #${w.id}`,
-    });
-
     await tx.insert(wireBuyerBalance).values({
       wireBuyerId: wb.id,
       balanceCup: input.monedaDestino === "CUP" ? String(cupTotal) : "0",
@@ -77,14 +66,6 @@ export async function createWire(input: CreateWireInput) {
       await tx.update(wireBuyerBalance)
         .set({ balanceCup: sql`${wireBuyerBalance.balanceCup} - ${input.pagado}`, updatedAt: new Date() })
         .where(eq(wireBuyerBalance.wireBuyerId, wb.id));
-      const [cupAcc] = await tx.select().from(account).where(eq(account.type, "efectivo_cup"));
-      if (cupAcc) {
-        await tx.insert(accountMovement).values({
-          accountId: cupAcc.id, date: input.date,
-          amount: String(input.pagado), currency: "CUP",
-          refType: "wire_payment", refId: w.id, note: "Pago inicial",
-        });
-      }
     }
 
     return { wireId: w.id, cupTotal };

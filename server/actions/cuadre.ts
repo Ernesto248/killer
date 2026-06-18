@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { cuadre, cuadreTirada, remeseroBalance, accountMovement } from "@/lib/db/schema";
+import { cuadre, cuadreTirada, remeseroBalance } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { registrarCuadre } from "@/lib/domain/cuadre";
 
@@ -18,9 +18,6 @@ export async function revertCuadreAction(cuadreId: number) {
     if (!c) throw new Error("Cuadre no encontrado");
 
     await tx.delete(cuadreTirada).where(eq(cuadreTirada.cuadreId, cuadreId));
-    await tx.delete(accountMovement).where(
-      eq(accountMovement.refId, cuadreId)
-    );
 
     const [prev] = await tx.select().from(cuadre)
       .where(eq(cuadre.remeseroId, c.remeseroId))

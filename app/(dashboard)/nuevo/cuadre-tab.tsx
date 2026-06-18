@@ -18,7 +18,6 @@ export function CuadreTab({ remeseros, initialRemesero }: { remeseros: Array<{ i
   const [selectedRemesero, setSelectedRemesero] = useState(initialRemesero ?? "");
   const [remeseroOpen, setRemeseroOpen] = useState(false);
   const [finalRaw, setFinalRaw] = useState("");
-  const [pagadoRaw, setPagadoRaw] = useState("");
   const [label, setLabel] = useState<"deuda" | "fondo">("deuda");
   const [text, setText] = useState("");
   const [parsed, setParsed] = useState<ParsedCuadre | null>(null);
@@ -29,7 +28,6 @@ export function CuadreTab({ remeseros, initialRemesero }: { remeseros: Array<{ i
   useEffect(() => { if (initialRemesero) setSelectedRemesero(initialRemesero); }, [initialRemesero]);
 
   const final = unfmt(finalRaw);
-  const pagado = unfmt(pagadoRaw);
 
   const onTextChange = (v: string) => {
     setText(v);
@@ -38,7 +36,6 @@ export function CuadreTab({ remeseros, initialRemesero }: { remeseros: Array<{ i
       setParsed(p);
       setTirado(p.tirado);
       if (p.balanceFinalCup) setFinalRaw(fmt(p.balanceFinalCup));
-      if (p.pagadoCup) setPagadoRaw(fmt(p.pagadoCup));
       if (p.balanceFinalLabel) setLabel(p.balanceFinalLabel);
     }
   };
@@ -49,13 +46,13 @@ export function CuadreTab({ remeseros, initialRemesero }: { remeseros: Array<{ i
       await createCuadreAction({
         remeseroName: selectedRemesero,
         date: new Date(),
-        pagadoCup: pagado,
+        pagadoCup: 0,
         balanceFinalCup: final,
         balanceFinalLabel: label,
         tirado: tirado.length > 0 ? tirado : undefined,
         rawText: text || "manual",
       });
-      setSelectedRemesero(""); setFinalRaw(""); setPagadoRaw(""); setText(""); setParsed(null); setTirado([]);
+      setSelectedRemesero(""); setFinalRaw(""); setText(""); setParsed(null); setTirado([]);
     });
   };
 
@@ -91,20 +88,12 @@ export function CuadreTab({ remeseros, initialRemesero }: { remeseros: Array<{ i
           </Popover>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
           <div>
             <Label className="text-xs text-muted-foreground uppercase">Saldo final</Label>
             <Input type="text" inputMode="numeric" placeholder="0" value={finalRaw}
               onChange={(e) => { const d = e.target.value.replace(/\D/g, ""); setFinalRaw(d ? Number(d).toLocaleString("es-ES", { useGrouping: true }) : ""); }}
               className="mt-1" />
           </div>
-          <div>
-            <Label className="text-xs text-muted-foreground uppercase">Pagado</Label>
-            <Input type="text" inputMode="numeric" placeholder="0" value={pagadoRaw}
-              onChange={(e) => { const d = e.target.value.replace(/\D/g, ""); setPagadoRaw(d ? Number(d).toLocaleString("es-ES", { useGrouping: true }) : ""); }}
-              className="mt-1" />
-          </div>
-        </div>
 
         <div>
           <Label className="text-xs text-muted-foreground uppercase">Estado</Label>

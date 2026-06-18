@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, ClipboardList, TrendingUp, Users, UserCheck, ArrowRightLeft, Receipt, Bell, Settings, PlusCircle } from "lucide-react";
+import { LayoutDashboard, ClipboardList, TrendingUp, Users, UserCheck, ArrowRightLeft, Receipt, Bell, Settings, PlusCircle, Wallet } from "lucide-react";
 
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -11,6 +11,8 @@ const items = [
   { href: "/cuadres", label: "Cuadres", icon: ClipboardList },
   { href: "/wires", label: "Wires", icon: TrendingUp },
   { href: "/wire-buyers", label: "Wire Buyers", icon: UserCheck },
+  { href: "/zelle", label: "Zelle", icon: Wallet },
+  { href: "/deudas", label: "Deudas", icon: Receipt },
   { href: "/tesoreria/movimiento", label: "Compra/Venta USD", icon: ArrowRightLeft },
   { href: "/gastos", label: "Gastos", icon: Receipt },
   { href: "/alertas", label: "Alertas", icon: Bell },

@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
-import { operationalExpense, account, accountMovement } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { operationalExpense } from "@/lib/db/schema";
 import { z } from "zod";
 
 export const expenseInputSchema = z.object({
@@ -14,34 +13,13 @@ export const expenseInputSchema = z.object({
 
 export async function createExpense(input: z.infer<typeof expenseInputSchema>) {
   const parsed = expenseInputSchema.parse(input);
-  const currency = parsed.cupAmount > 0 ? "CUP" : "USD";
-  const amount = parsed.cupAmount > 0 ? parsed.cupAmount : parsed.usdAmount;
-
-  return db.transaction(async (tx) => {
-    const [from] = await tx.select().from(account).where(eq(account.type, currency === "CUP" ? "efectivo_cup" : "efectivo_usd"));
-    const fromId = from?.id ?? null;
-
-    const [e] = await tx.insert(operationalExpense).values({
-      date: parsed.date,
-      categoryId: parsed.categoryId,
-      description: parsed.description,
-      cupAmount: String(parsed.cupAmount),
-      usdAmount: String(parsed.usdAmount),
-      fromAccountId: fromId,
-      note: parsed.note,
-    }).returning();
-
-    if (fromId) {
-      await tx.insert(accountMovement).values({
-        accountId: fromId,
-        date: parsed.date,
-        amount: String(-amount),
-        currency,
-        refType: "expense",
-        refId: e.id,
-        note: parsed.description,
-      });
-    }
-    return e;
-  });
+  const [e] = await db.insert(operationalExpense).values({
+    date: parsed.date,
+    categoryId: parsed.categoryId,
+    description: parsed.description,
+    cupAmount: String(parsed.cupAmount),
+    usdAmount: String(parsed.usdAmount),
+    note: parsed.note,
+  }).returning();
+  return e;
 }

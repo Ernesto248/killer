@@ -37,6 +37,7 @@ export const account = pgTable("account", {
   type: text("type").notNull(),
   currency: text("currency").notNull(),
   bank: text("bank"),
+  balanceManual: numeric("balance_manual", { precision: 18, scale: 2 }).notNull().default("0"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -231,4 +232,23 @@ export const config = pgTable("config", {
   key: text("key").primaryKey(),
   value: jsonb("value").notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const zelleAccount = pgTable("zelle_account", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  bank: text("bank"),
+  balanceUsd: numeric("balance_usd", { precision: 18, scale: 2 }).notNull().default("0"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const externalDebt = pgTable("external_debt", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  direction: text("direction").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });

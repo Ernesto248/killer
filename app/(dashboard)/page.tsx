@@ -1,109 +1,112 @@
 import { db } from "@/lib/db";
-import { dailySnapshot, alert, account, accountMovement, remeseroBalance, wireBuyerBalance, cuadre } from "@/lib/db/schema";
-import { desc, isNull, sql, gte, and } from "drizzle-orm";
-import { computeDailySnapshot } from "@/lib/domain/snapshot";
+import { account, remeseroBalance, wireBuyerBalance, cuadre, zelleAccount, externalDebt, config } from "@/lib/db/schema";
+import { desc, eq, isNull } from "drizzle-orm";
+import Link from "next/link";
 import { fetchTasas } from "@/lib/fetch-tasas";
-import { CapitalEvolution } from "@/components/charts/capital-evolution";
 import { cn } from "@/lib/utils";
+import { EditableBalance } from "./editable-balance";
+import { ExternalDebtsSection } from "./external-debts-section";
+import { ElToqueSection } from "./eltoque-section";
 
 export const dynamic = "force-dynamic";
 
 function fmt(n: number) { return n.toLocaleString("es-ES", { useGrouping: true }); }
 
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "ahora";
-  if (mins < 60) return `hace ${mins} min`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `hace ${hrs}h`;
-  return `hace ${Math.floor(hrs / 24)}d`;
-}
-
-export default async function Dashboard({
-  searchParams,
-}: {
-  searchParams: Promise<{ chart?: string }>;
-}) {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ showDebts?: string }> }) {
   const sp = await searchParams;
-  const chartMode = sp.chart === "usd" ? "usd" : "cup";
+  const showDebts = sp.showDebts === "1";
 
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-  const [activeAlerts, tasas, accs, mvBalances, rBalances, wBalances, labels, weekMovs] = await Promise.all([
-    db.select().from(alert).where(isNull(alert.dismissedAt)).limit(10),
-    fetchTasas(),
+  const [accs, rBalances, wBalances, labels, zelles, debts, tasas, tasaCfg] = await Promise.all([
     db.select().from(account),
-    db.select({ accountId: accountMovement.accountId, total: sql<number>`COALESCE(SUM(amount::numeric), 0)` }).from(accountMovement).groupBy(accountMovement.accountId),
     db.select().from(remeseroBalance),
     db.select().from(wireBuyerBalance),
     db.select({ remeseroId: cuadre.remeseroId, label: cuadre.balanceFinalLabel }).from(cuadre).orderBy(desc(cuadre.date)),
-    db.select({ date: accountMovement.date, amount: accountMovement.amount, accountId: accountMovement.accountId, currency: accountMovement.currency })
-      .from(accountMovement)
-      .where(gte(accountMovement.date, weekAgo)),
+    db.select().from(zelleAccount).where(eq(zelleAccount.isActive, true)),
+    db.select().from(externalDebt).where(eq(externalDebt.isActive, true)),
+    fetchTasas(),
+    db.select().from(config).where(eq(config.key, "tasa_global")).then((r) => r[0] ?? null),
   ]);
 
-  void computeDailySnapshot(new Date());
+  const tasaGlobal = (tasaCfg?.value as { rate: number })?.rate ?? 600;
 
+  // Physical accounts
   const cupAcc = accs.find((a) => a.type === "efectivo_cup");
   const usdAcc = accs.find((a) => a.type === "efectivo_usd");
-  const cupBalance = Number(mvBalances.find((b) => b.accountId === cupAcc?.id)?.total ?? 0);
-  const usdBalance = Number(mvBalances.find((b) => b.accountId === usdAcc?.id)?.total ?? 0);
+  const cupFisico = Number(cupAcc?.balanceManual ?? 0);
+  const usdFisico = Number(usdAcc?.balanceManual ?? 0);
 
+  // Remesero labels
   const labelMap = new Map<number, string>();
   for (const l of labels) { if (!labelMap.has(l.remeseroId)) labelMap.set(l.remeseroId, l.label ?? ""); }
 
-  let nosDebenCup = 0; let debemosCup = 0;
+  let remFondo = 0; let remDeuda = 0;
   for (const rb of rBalances) {
     const cup = Number(rb.balanceCup ?? 0);
-    if (labelMap.get(rb.remeseroId) === "fondo") nosDebenCup += cup;
-    else if (labelMap.get(rb.remeseroId) === "deuda") debemosCup += cup;
+    if (labelMap.get(rb.remeseroId) === "fondo") remFondo += cup;
+    else if (labelMap.get(rb.remeseroId) === "deuda") remDeuda += cup;
   }
-  const remeserosCup = nosDebenCup - debemosCup;
+  const remeserosCup = remFondo - remDeuda;
 
-  let nosDebenUsd = 0; let debemosUsd = 0;
+  let remNosDebenUsd = 0; let remDebemosUsd = 0;
   for (const rb of rBalances) {
     const usd = Number(rb.balanceUsd ?? 0);
-    if (usd > 0) debemosUsd += usd;
-    else nosDebenUsd += Math.abs(usd);
+    if (usd > 0) remDebemosUsd += usd;
+    else remNosDebenUsd += Math.abs(usd);
   }
-  const remeserosUsd = nosDebenUsd - debemosUsd;
+  const remeserosUsd = remNosDebenUsd - remDebemosUsd;
 
+  // Wire balances
   let wireCup = 0; let wireUsd = 0;
-  for (const wb of wBalances) {
-    wireCup += Number(wb.balanceCup ?? 0);
-    wireUsd += Number(wb.balanceUsd ?? 0);
+  for (const wb of wBalances) { wireCup += Number(wb.balanceCup ?? 0); wireUsd += Number(wb.balanceUsd ?? 0); }
+
+  // Zelle
+  let zelleTotal = 0;
+  for (const z of zelles) { zelleTotal += Number(z.balanceUsd ?? 0); }
+
+  // External debts
+  let extDebenCup = 0; let extDeboCup = 0; let extDebenUsd = 0; let extDeboUsd = 0;
+  for (const d of debts) {
+    const amt = Number(d.amount ?? 0);
+    if (d.direction === "me_deben") {
+      if (d.currency === "CUP") extDebenCup += amt;
+      else extDebenUsd += amt;
+    } else {
+      if (d.currency === "CUP") extDeboCup += amt;
+      else extDeboUsd += amt;
+    }
   }
 
-  const cards = [
-    { label: "CUP Físico", value: cupBalance, suffix: "CUP" },
-    { label: "USD Físico", value: usdBalance, suffix: "USD" },
+  // Ganancia in USD
+  const toUsd = (cup: number) => cup / tasaGlobal;
+  const ganancia = toUsd(cupFisico + extDebenCup - remDeuda - wireCup - extDeboCup)
+    + (usdFisico + zelleTotal + extDebenUsd - remDebemosUsd - wireUsd - extDeboUsd);
+
+  const kpiCards = [
+    { label: "CUP Físico", value: cupFisico, suffix: "CUP", accountId: cupAcc?.id },
+    { label: "USD Físico", value: usdFisico, suffix: "USD", accountId: usdAcc?.id },
+    { label: "Tasa Global", value: tasaGlobal, suffix: "CUP/USD", isTasa: true },
+  ];
+
+  const debtCards = [
     { label: "Remeseros CUP", value: remeserosCup, suffix: "CUP" },
     { label: "Remeseros USD", value: remeserosUsd, suffix: "USD" },
     { label: "Wires pend. CUP", value: wireCup, suffix: "CUP" },
     { label: "Wires pend. USD", value: wireUsd, suffix: "USD" },
   ];
 
-  // Weekly balance chart data
-  const targetId = chartMode === "usd" ? usdAcc?.id : cupAcc?.id;
-  const dailyMap = new Map<string, number>();
-  for (const m of weekMovs) {
-    if (m.accountId !== targetId) continue;
-    const d = m.date.toISOString().slice(0, 10);
-    dailyMap.set(d, (dailyMap.get(d) ?? 0) + Number(m.amount));
-  }
-  let cumulative = 0;
-  const chartData: Array<{ date: string; value: number }> = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-    cumulative += dailyMap.get(d) ?? 0;
-    chartData.push({ date: d.slice(5), value: Math.round(cumulative) });
-  }
-
   return (
     <div className="space-y-6">
+      {/* Section 1: Fisico + Tasa */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        {cards.map((c) => (
+        {kpiCards.map((c) => (
+          <EditableBalance key={c.label} label={c.label} value={c.value} suffix={c.suffix}
+            accountId={c.accountId} isTasa={c.isTasa} />
+        ))}
+      </div>
+
+      {/* Section 2: Remeseros + Wires */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {debtCards.map((c) => (
           <div key={c.label} className={cn("card-apple p-4", c.value >= 0 ? "bg-green-50/40" : "bg-red-50/40")}>
             <div className="text-xs text-muted-foreground uppercase tracking-wide">{c.label}</div>
             <div className={cn("text-lg sm:text-2xl tabular-nums font-semibold mt-1", c.value >= 0 ? "text-green-600" : "text-red-600")}>
@@ -113,47 +116,35 @@ export default async function Dashboard({
         ))}
       </div>
 
-      {tasas && (
-        <>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">El Toque</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="card-apple p-4">
-              <div className="text-xs text-muted-foreground uppercase tracking-wide">Dólar (CUP)</div>
-              <div className="text-lg sm:text-2xl tabular-nums font-semibold mt-1">{tasas.usd?.toLocaleString() ?? "—"} CUP</div>
-              <div className="text-xs text-muted-foreground mt-1">{timeAgo(tasas.ts)}</div>
-            </div>
-            <div className="card-apple p-4">
-              <div className="text-xs text-muted-foreground uppercase tracking-wide">Euro (CUP)</div>
-              <div className="text-lg sm:text-2xl tabular-nums font-semibold mt-1">{tasas.eur?.toLocaleString() ?? "—"} CUP</div>
-              <div className="text-xs text-muted-foreground mt-1">{timeAgo(tasas.ts)}</div>
-            </div>
-          </div>
-        </>
-      )}
-
-      <section>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Última semana — {chartMode === "usd" ? "USD" : "CUP"} Físico
-          </h3>
-          <div className="flex gap-1">
-            <a href="?chart=cup" className={cn("rounded-lg px-2 py-1 text-xs font-medium transition-colors", chartMode === "cup" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent")}>CUP</a>
-            <a href="?chart=usd" className={cn("rounded-lg px-2 py-1 text-xs font-medium transition-colors", chartMode === "usd" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent")}>USD</a>
-          </div>
+      {/* Section 3: Zelle */}
+      <div>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-2">Cuentas Zelle</h3>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          {zelles.map((z) => (
+            <EditableBalance key={z.id} label={z.name} value={Number(z.balanceUsd ?? 0)} suffix="USD" zelleId={z.id} />
+          ))}
+          <Link href="/zelle" className="card-apple p-4 flex items-center justify-center min-h-[80px] border-dashed text-muted-foreground text-xs hover:text-foreground transition-colors">
+            + Nueva cuenta
+          </Link>
         </div>
-        <div className="card-apple p-4">
-          <CapitalEvolution data={chartData} />
-        </div>
-      </section>
+      </div>
 
-      {activeAlerts.length > 0 && (
-        <section>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-2">Alertas</h3>
-          <ul className="space-y-1">
-            {activeAlerts.map((a) => <li key={a.id} className="card-apple p-3 text-sm">{a.message}</li>)}
-          </ul>
-        </section>
-      )}
+      {/* Section 4: Deudas externas */}
+      <ExternalDebtsSection debts={debts} showDebts={showDebts} extDebenCup={extDebenCup} extDeboCup={extDeboCup} extDebenUsd={extDebenUsd} extDeboUsd={extDeboUsd} />
+
+      {/* Section 5: Ganancia */}
+      <div className={cn("card-apple p-6 text-center", ganancia >= 0 ? "bg-green-50/40" : "bg-red-50/40")}>
+        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Ganancia</div>
+        <div className={cn("text-3xl sm:text-4xl tabular-nums font-bold", ganancia >= 0 ? "text-green-600" : "text-red-600")}>
+          {ganancia >= 0 ? "+" : ""}${fmt(Math.round(ganancia))} USD
+        </div>
+        <div className="text-xs text-muted-foreground mt-2">
+          Físico + Zelle + A favor − Deudas − Wires − Ext
+        </div>
+      </div>
+
+      {/* El Toque */}
+      {tasas && <ElToqueSection tasas={tasas} />}
     </div>
   );
 }

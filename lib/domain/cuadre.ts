@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { cuadre, cuadreTirada, remesero, remeseroBalance, account, accountMovement } from "@/lib/db/schema";
+import { cuadre, cuadreTirada, remesero, remeseroBalance } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export type CuadreInput = {
@@ -20,9 +20,6 @@ export async function registrarCuadre(input: CuadreInput) {
     if (!r) {
       [r] = await tx.insert(remesero).values({ name: input.remeseroName }).returning();
     }
-
-    const [cupAccount] = await tx.select().from(account).where(eq(account.type, "efectivo_cup"));
-    if (!cupAccount) throw new Error("Cuenta CUP Fisico no encontrada");
 
     const [c] = await tx.insert(cuadre).values({
       remeseroId: r.id,
@@ -62,18 +59,6 @@ export async function registrarCuadre(input: CuadreInput) {
         updatedAt: new Date(),
       },
     });
-
-    if (input.pagadoCup > 0) {
-      await tx.insert(accountMovement).values({
-        accountId: cupAccount.id,
-        date: input.date,
-        amount: String(-input.pagadoCup),
-        currency: "CUP",
-        refType: "cuadre",
-        refId: c.id,
-        note: `Pago a ${input.remeseroName}`,
-      });
-    }
 
     return { cuadreId: c.id, remeseroId: r.id };
   });

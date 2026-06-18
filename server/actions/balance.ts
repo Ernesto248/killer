@@ -28,16 +28,29 @@ export async function deactivateZelleAccount(id: number) {
   revalidatePath("/");
 }
 
-export async function createExternalDebt(input: { name: string; amount: number; currency: string; direction: string }) {
+export async function createExternalDebt(input: { name: string; amount: number; currency: string; direction: string; notes?: string }) {
   const [row] = await db.insert(externalDebt).values({
     name: input.name,
     amount: String(input.amount),
     currency: input.currency,
     direction: input.direction,
+    notes: input.notes ?? null,
   }).returning();
   revalidatePath("/");
   revalidatePath("/deudas");
   return row;
+}
+
+export async function updateExternalDebt(id: number, input: { name?: string; amount?: number; currency?: string; direction?: string; notes?: string }) {
+  const data: Record<string, unknown> = {};
+  if (input.name !== undefined) data.name = input.name;
+  if (input.amount !== undefined) data.amount = String(input.amount);
+  if (input.currency !== undefined) data.currency = input.currency;
+  if (input.direction !== undefined) data.direction = input.direction;
+  if (input.notes !== undefined) data.notes = input.notes;
+  await db.update(externalDebt).set(data).where(eq(externalDebt.id, id));
+  revalidatePath("/");
+  revalidatePath("/deudas");
 }
 
 export async function deactivateExternalDebt(id: number) {

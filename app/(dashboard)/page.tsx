@@ -8,6 +8,7 @@ import { EditableBalance } from "./editable-balance";
 import { ExternalDebtsSection } from "./external-debts-section";
 import { ElToqueSection } from "./eltoque-section";
 import { ProjectsSection } from "./projects-section";
+import { SaveSnapshotButton } from "./save-snapshot-button";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +112,16 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <SaveSnapshotButton data={{
+          cupFisico, usdFisico, tasaGlobal,
+          remeserosCup, remeserosUsd, wiresCup, wiresUsd, zelleTotal,
+          extDebenCup, extDeboCup, extDebenUsd, extDeboUsd,
+          proyDebenCup, proyDeboCup, proyDebenUsd, proyDeboUsd,
+          ganancia: Math.round(ganancia),
+        }} />
+      </div>
+
       {/* Section 1: Fisico + Tasa */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {kpiCards.map((c) => (

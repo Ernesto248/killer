@@ -14,6 +14,7 @@ const items = [
   { href: "/zelle", label: "Zelle", icon: Wallet },
   { href: "/deudas", label: "Deudas", icon: Receipt },
   { href: "/proyectos", label: "Proyectos", icon: TrendingUp },
+  { href: "/historial", label: "Historial", icon: Bell },
   { href: "/tesoreria/movimiento", label: "Compra/Venta USD", icon: ArrowRightLeft },
   { href: "/gastos", label: "Gastos", icon: Receipt },
   { href: "/alertas", label: "Alertas", icon: Bell },

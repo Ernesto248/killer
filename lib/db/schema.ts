@@ -264,3 +264,25 @@ export const project = pgTable("project", {
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const snapshotHistory = pgTable("snapshot_history", {
+  id: serial("id").primaryKey(),
+  cupFisico: numeric("cup_fisico", { precision: 18, scale: 2 }).notNull().default("0"),
+  usdFisico: numeric("usd_fisico", { precision: 18, scale: 2 }).notNull().default("0"),
+  tasaGlobal: numeric("tasa_global", { precision: 8, scale: 2 }).notNull(),
+  remeserosCup: numeric("remeseros_cup", { precision: 18, scale: 2 }).notNull().default("0"),
+  remeserosUsd: numeric("remeseros_usd", { precision: 18, scale: 2 }).notNull().default("0"),
+  wiresCup: numeric("wires_cup", { precision: 18, scale: 2 }).notNull().default("0"),
+  wiresUsd: numeric("wires_usd", { precision: 18, scale: 2 }).notNull().default("0"),
+  zelleTotal: numeric("zelle_total", { precision: 18, scale: 2 }).notNull().default("0"),
+  extDebenCup: numeric("ext_deben_cup", { precision: 18, scale: 2 }).notNull().default("0"),
+  extDeboCup: numeric("ext_debo_cup", { precision: 18, scale: 2 }).notNull().default("0"),
+  extDebenUsd: numeric("ext_deben_usd", { precision: 18, scale: 2 }).notNull().default("0"),
+  extDeboUsd: numeric("ext_debo_usd", { precision: 18, scale: 2 }).notNull().default("0"),
+  proyDebenCup: numeric("proy_deben_cup", { precision: 18, scale: 2 }).notNull().default("0"),
+  proyDeboCup: numeric("proy_debo_cup", { precision: 18, scale: 2 }).notNull().default("0"),
+  proyDebenUsd: numeric("proy_deben_usd", { precision: 18, scale: 2 }).notNull().default("0"),
+  proyDeboUsd: numeric("proy_debo_usd", { precision: 18, scale: 2 }).notNull().default("0"),
+  ganancia: numeric("ganancia", { precision: 18, scale: 2 }).notNull().default("0"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

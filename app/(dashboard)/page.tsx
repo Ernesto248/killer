@@ -115,7 +115,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <div className="flex items-center justify-between">
         <SaveSnapshotButton data={{
           cupFisico, usdFisico, tasaGlobal,
-          remeserosCup, remeserosUsd, wiresCup, wiresUsd, zelleTotal,
+          remeserosCup, remeserosUsd,
+          wiresCup: wireCup, wiresUsd: wireUsd, zelleTotal,
           extDebenCup, extDeboCup, extDebenUsd, extDeboUsd,
           proyDebenCup, proyDeboCup, proyDebenUsd, proyDeboUsd,
           ganancia: Math.round(ganancia),

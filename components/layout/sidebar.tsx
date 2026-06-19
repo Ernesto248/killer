@@ -13,6 +13,7 @@ const items = [
   { href: "/wire-buyers", label: "Wire Buyers", icon: UserCheck },
   { href: "/zelle", label: "Zelle", icon: Wallet },
   { href: "/deudas", label: "Deudas", icon: Receipt },
+  { href: "/proyectos", label: "Proyectos", icon: TrendingUp },
   { href: "/tesoreria/movimiento", label: "Compra/Venta USD", icon: ArrowRightLeft },
   { href: "/gastos", label: "Gastos", icon: Receipt },
   { href: "/alertas", label: "Alertas", icon: Bell },

@@ -1,6 +1,6 @@
 "use server";
 import { db } from "@/lib/db";
-import { account, zelleAccount, externalDebt, config } from "@/lib/db/schema";
+import { account, zelleAccount, externalDebt, project, config } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -62,4 +62,29 @@ export async function deactivateExternalDebt(id: number) {
 export async function updateTasaGlobalAction(rate: number) {
   await db.update(config).set({ value: { rate }, updatedAt: new Date() }).where(eq(config.key, "tasa_global"));
   revalidatePath("/");
+}
+
+export async function createProject(input: { name: string; amount: number; currency: string; direction: string; notes?: string }) {
+  const [row] = await db.insert(project).values({
+    name: input.name, amount: String(input.amount), currency: input.currency,
+    direction: input.direction, notes: input.notes ?? null,
+  }).returning();
+  revalidatePath("/"); revalidatePath("/proyectos");
+  return row;
+}
+
+export async function updateProject(id: number, input: { name?: string; amount?: number; currency?: string; direction?: string; notes?: string }) {
+  const data: Record<string, unknown> = {};
+  if (input.name !== undefined) data.name = input.name;
+  if (input.amount !== undefined) data.amount = String(input.amount);
+  if (input.currency !== undefined) data.currency = input.currency;
+  if (input.direction !== undefined) data.direction = input.direction;
+  if (input.notes !== undefined) data.notes = input.notes || null;
+  await db.update(project).set(data).where(eq(project.id, id));
+  revalidatePath("/"); revalidatePath("/proyectos");
+}
+
+export async function deactivateProject(id: number) {
+  await db.update(project).set({ isActive: false }).where(eq(project.id, id));
+  revalidatePath("/"); revalidatePath("/proyectos");
 }

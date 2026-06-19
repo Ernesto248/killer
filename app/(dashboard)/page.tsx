@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { account, remeseroBalance, wireBuyerBalance, cuadre, zelleAccount, externalDebt, config } from "@/lib/db/schema";
+import { account, remeseroBalance, wireBuyerBalance, cuadre, zelleAccount, externalDebt, project, config } from "@/lib/db/schema";
 import { desc, eq, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { fetchTasas } from "@/lib/fetch-tasas";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { EditableBalance } from "./editable-balance";
 import { ExternalDebtsSection } from "./external-debts-section";
 import { ElToqueSection } from "./eltoque-section";
+import { ProjectsSection } from "./projects-section";
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +17,14 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   const showDebts = sp.showDebts === "1";
 
-  const [accs, rBalances, wBalances, labels, zelles, debts, tasas, tasaCfg] = await Promise.all([
+  const [accs, rBalances, wBalances, labels, zelles, debts, projects, tasas, tasaCfg] = await Promise.all([
     db.select().from(account),
     db.select().from(remeseroBalance),
     db.select().from(wireBuyerBalance),
     db.select({ remeseroId: cuadre.remeseroId, label: cuadre.balanceFinalLabel }).from(cuadre).orderBy(desc(cuadre.date)),
     db.select().from(zelleAccount).where(eq(zelleAccount.isActive, true)),
     db.select().from(externalDebt).where(eq(externalDebt.isActive, true)),
+    db.select().from(project).where(eq(project.isActive, true)),
     fetchTasas(),
     db.select().from(config).where(eq(config.key, "tasa_global")).then((r) => r[0] ?? null),
   ]);
@@ -76,10 +78,23 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     }
   }
 
+  // Projects
+  let proyDebenCup = 0; let proyDeboCup = 0; let proyDebenUsd = 0; let proyDeboUsd = 0;
+  for (const p of projects) {
+    const amt = Number(p.amount ?? 0);
+    if (p.direction === "me_deben") {
+      if (p.currency === "CUP") proyDebenCup += amt;
+      else proyDebenUsd += amt;
+    } else {
+      if (p.currency === "CUP") proyDeboCup += amt;
+      else proyDeboUsd += amt;
+    }
+  }
+
   // Ganancia in USD
   const toUsd = (cup: number) => cup / tasaGlobal;
-  const ganancia = toUsd(cupFisico + extDebenCup - remDeuda - wireCup - extDeboCup)
-    + (usdFisico + zelleTotal + extDebenUsd - remDebemosUsd - wireUsd - extDeboUsd);
+  const ganancia = toUsd(cupFisico + extDebenCup + proyDebenCup - remDeuda - wireCup - extDeboCup - proyDeboCup)
+    + (usdFisico + zelleTotal + extDebenUsd + proyDebenUsd - remDebemosUsd - wireUsd - extDeboUsd - proyDeboUsd);
 
   const kpiCards = [
     { label: "CUP Físico", value: cupFisico, suffix: "CUP", accountId: cupAcc?.id },
@@ -131,6 +146,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
       {/* Section 4: Deudas externas */}
       <ExternalDebtsSection debts={debts} showDebts={showDebts} extDebenCup={extDebenCup} extDeboCup={extDeboCup} extDebenUsd={extDebenUsd} extDeboUsd={extDeboUsd} />
+
+      {/* Section 4.5: Proyectos */}
+      <ProjectsSection projects={projects} proyDebenCup={proyDebenCup} proyDeboCup={proyDeboCup} proyDebenUsd={proyDebenUsd} proyDeboUsd={proyDeboUsd} />
 
       {/* Section 5: Ganancia */}
       <div className={cn("card-apple p-6 text-center", ganancia >= 0 ? "bg-green-50/40" : "bg-red-50/40")}>

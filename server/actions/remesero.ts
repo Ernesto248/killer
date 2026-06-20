@@ -1,6 +1,6 @@
 "use server";
 import { db } from "@/lib/db";
-import { remeseroBalance, remeseroUsdMovement } from "@/lib/db/schema";
+import { remesero, remeseroBalance, remeseroUsdMovement } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -31,4 +31,20 @@ export async function addRemeseroUsdMovement(input: z.infer<typeof schema>) {
     });
   });
   revalidatePath(`/remeseros/${parsed.remeseroId}`);
+}
+
+export async function createRemeseroAction(name: string) {
+  const [row] = await db.insert(remesero).values({ name }).returning();
+  revalidatePath("/remeseros");
+  return row;
+}
+
+export async function updateRemeseroAction(id: number, name: string) {
+  await db.update(remesero).set({ name }).where(eq(remesero.id, id));
+  revalidatePath("/remeseros");
+}
+
+export async function deactivateRemeseroAction(id: number) {
+  await db.update(remesero).set({ isActive: false }).where(eq(remesero.id, id));
+  revalidatePath("/remeseros");
 }

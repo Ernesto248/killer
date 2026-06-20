@@ -3,7 +3,7 @@ import { createWire } from "@/lib/domain/wire";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { wire, wirePayment, wireBuyerBalance, account } from "@/lib/db/schema";
+import { wire, wirePayment, wireBuyerBalance, wireBuyer, account } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 export async function createWireAction(input: Parameters<typeof createWire>[0]) {
@@ -61,4 +61,20 @@ export async function createZelleAccount(name: string) {
   }).returning();
   revalidatePath("/wires/nuevo");
   return row;
+}
+
+export async function createWireBuyerAction(name: string) {
+  const [row] = await db.insert(wireBuyer).values({ name }).returning();
+  revalidatePath("/wire-buyers");
+  return row;
+}
+
+export async function updateWireBuyerAction(id: number, name: string) {
+  await db.update(wireBuyer).set({ name }).where(eq(wireBuyer.id, id));
+  revalidatePath("/wire-buyers");
+}
+
+export async function deactivateWireBuyerAction(id: number) {
+  await db.update(wireBuyer).set({ isActive: false }).where(eq(wireBuyer.id, id));
+  revalidatePath("/wire-buyers");
 }

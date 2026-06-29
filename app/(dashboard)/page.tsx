@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { account, remeseroBalance, wireBuyerBalance, cuadre, zelleAccount, externalDebt, project, config } from "@/lib/db/schema";
+import { account, remeseroBalance, cuadre, zelleAccount, externalDebt, project, config, wireItem } from "@/lib/db/schema";
 import { desc, eq, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { fetchTasas } from "@/lib/fetch-tasas";
@@ -18,10 +18,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   const showDebts = sp.showDebts === "1";
 
-  const [accs, rBalances, wBalances, labels, zelles, debts, projects, tasas, tasaCfg] = await Promise.all([
+  const [accs, rBalances, wires, labels, zelles, debts, projects, tasas, tasaCfg] = await Promise.all([
     db.select().from(account),
     db.select().from(remeseroBalance),
-    db.select().from(wireBuyerBalance),
+    db.select().from(wireItem).where(eq(wireItem.isActive, true)),
     db.select({ remeseroId: cuadre.remeseroId, label: cuadre.balanceFinalLabel }).from(cuadre).orderBy(desc(cuadre.date)),
     db.select().from(zelleAccount).where(eq(zelleAccount.isActive, true)),
     db.select().from(externalDebt).where(eq(externalDebt.isActive, true)),
@@ -60,7 +60,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   // Wire balances
   let wireCup = 0; let wireUsd = 0;
-  for (const wb of wBalances) { wireCup += Number(wb.balanceCup ?? 0); wireUsd += Number(wb.balanceUsd ?? 0); }
+  for (const w of wires) {
+    const amt = Number(w.amount ?? 0);
+    const signed = w.direction === "me_deben" ? amt : -amt;
+    if (w.currency === "CUP") wireCup += signed;
+    else wireUsd += signed;
+  }
 
   // Zelle
   let zelleTotal = 0;
@@ -94,8 +99,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   // Ganancia in USD
   const toUsd = (cup: number) => cup / tasaGlobal;
-  const ganancia = toUsd(cupFisico + extDebenCup + proyDebenCup - remDeuda - wireCup - extDeboCup - proyDeboCup)
-    + (usdFisico + zelleTotal + extDebenUsd + proyDebenUsd - remDebemosUsd - wireUsd - extDeboUsd - proyDeboUsd);
+  const ganancia = toUsd(cupFisico + extDebenCup + proyDebenCup + wireCup - remDeuda - extDeboCup - proyDeboCup)
+    + (usdFisico + zelleTotal + extDebenUsd + proyDebenUsd + wireUsd - remDebemosUsd - extDeboUsd - proyDeboUsd);
 
   const kpiCards = [
     { label: "CUP Físico", value: cupFisico, suffix: "CUP", accountId: cupAcc?.id },

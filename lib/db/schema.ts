@@ -155,6 +155,17 @@ export const wireBuyerBalance = pgTable("wire_buyer_balance", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const wireItem = pgTable("wire_item", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  direction: text("direction").notNull(),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ============================================
 // TESORERÍA
 // ============================================
@@ -285,4 +296,14 @@ export const snapshotHistory = pgTable("snapshot_history", {
   proyDeboUsd: numeric("proy_debo_usd", { precision: 18, scale: 2 }).notNull().default("0"),
   ganancia: numeric("ganancia", { precision: 18, scale: 2 }).notNull().default("0"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const undoAction = pgTable("undo_action", {
+  id: serial("id").primaryKey(),
+  description: text("description").notNull(),
+  kind: text("kind").notNull(),
+  payload: jsonb("payload").notNull(),
+  paths: jsonb("paths").$type<string[]>().notNull().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  undoneAt: timestamp("undone_at"),
 });

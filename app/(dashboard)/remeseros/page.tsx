@@ -33,7 +33,11 @@ export default async function RemeserosPage() {
   }
 
   const withLabels = rows.map((r) => ({
-    ...r,
+    id: r.id,
+    name: r.name,
+    balanceCup: r.balanceCup,
+    balanceUsd: r.balanceUsd,
+    lastCuadreAt: r.lastCuadreAt?.toISOString() ?? null,
     lastLabel: labelMap.get(r.id) ?? null,
   }));
 

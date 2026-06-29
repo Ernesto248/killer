@@ -3,11 +3,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { TrendingUp, UserCheck, ArrowRightLeft, Receipt, Bell, Settings } from "lucide-react";
+import { TrendingUp, ArrowRightLeft, Receipt, Bell, Settings } from "lucide-react";
 
 const extraItems = [
   { href: "/wires", label: "Wires", icon: TrendingUp },
-  { href: "/wire-buyers", label: "Wire Buyers", icon: UserCheck },
   { href: "/tesoreria/movimiento", label: "Compra/Venta USD", icon: ArrowRightLeft },
   { href: "/gastos", label: "Gastos", icon: Receipt },
   { href: "/alertas", label: "Alertas", icon: Bell },

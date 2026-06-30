@@ -96,11 +96,11 @@ async function applySimpleUndo(
     return;
   }
   if (payload.action === "restore" && payload.before) {
-    await tx.insert(table).values(payload.before as never);
+    await tx.insert(table).values(mapSimpleRow(payload.table, payload.before) as never);
     return;
   }
   if (payload.action === "update" && payload.before) {
-    await tx.update(table).set(payload.before as never).where(eq(table.id, payload.id));
+    await tx.update(table).set(mapSimpleUpdate(payload.table, payload.before) as never).where(eq(table.id, payload.id));
   }
 }
 
@@ -115,18 +115,142 @@ async function applyRemeseroUndo(
   }
 
   if (payload.action === "restore" && payload.before) {
-    await tx.insert(remesero).values(payload.before.remesero);
-    if (payload.before.balance) await tx.insert(remeseroBalance).values(payload.before.balance);
+    await tx.insert(remesero).values(mapRemeseroInsert(payload.before.remesero));
+    if (payload.before.balance) {
+      await tx.insert(remeseroBalance).values(mapRemeseroBalance(payload.before.balance));
+    }
     return;
   }
 
   if (payload.action === "update" && payload.before) {
-    await tx.update(remesero).set(payload.before.remesero).where(eq(remesero.id, payload.id));
+    await tx.update(remesero).set(mapRemeseroUpdate(payload.before.remesero)).where(eq(remesero.id, payload.id));
     if (payload.before.balance) {
-      await tx.insert(remeseroBalance).values(payload.before.balance).onConflictDoUpdate({
+      await tx.insert(remeseroBalance).values(mapRemeseroBalance(payload.before.balance)).onConflictDoUpdate({
         target: remeseroBalance.remeseroId,
-        set: payload.before.balance,
+        set: mapRemeseroBalanceUpdate(payload.before.balance),
       });
     }
   }
+}
+
+function mapSimpleRow(
+  tableName: Extract<UndoPayload, { table: "externalDebt" | "account" | "category" | "project" | "wireItem" | "zelleAccount" }>["table"],
+  row: ExternalDebtRow | AccountRow | CategoryRow | ProjectRow | WireItemRow | ZelleRow,
+) {
+  if (tableName === "externalDebt") {
+    const debt = row as ExternalDebtRow;
+    return {
+      id: debt.id,
+      name: debt.name,
+      amount: debt.amount,
+      currency: debt.currency,
+      direction: debt.direction,
+      notes: debt.notes,
+      isActive: debt.isActive,
+      createdAt: debt.createdAt,
+    };
+  }
+  if (tableName === "account") {
+    const accountRow = row as AccountRow;
+    return {
+      id: accountRow.id,
+      name: accountRow.name,
+      type: accountRow.type,
+      currency: accountRow.currency,
+      bank: accountRow.bank,
+      balanceManual: accountRow.balanceManual,
+      isActive: accountRow.isActive,
+      createdAt: accountRow.createdAt,
+    };
+  }
+  if (tableName === "category") {
+    const categoryRow = row as CategoryRow;
+    return {
+      id: categoryRow.id,
+      name: categoryRow.name,
+      isActive: categoryRow.isActive,
+      createdAt: categoryRow.createdAt,
+    };
+  }
+  if (tableName === "project") {
+    const projectRow = row as ProjectRow;
+    return {
+      id: projectRow.id,
+      name: projectRow.name,
+      amount: projectRow.amount,
+      currency: projectRow.currency,
+      direction: projectRow.direction,
+      notes: projectRow.notes,
+      isActive: projectRow.isActive,
+      createdAt: projectRow.createdAt,
+    };
+  }
+  if (tableName === "wireItem") {
+    const wireRow = row as WireItemRow;
+    return {
+      id: wireRow.id,
+      name: wireRow.name,
+      amount: wireRow.amount,
+      currency: wireRow.currency,
+      direction: wireRow.direction,
+      notes: wireRow.notes,
+      isActive: wireRow.isActive,
+      createdAt: wireRow.createdAt,
+    };
+  }
+  const zelleRow = row as ZelleRow;
+  return {
+    id: zelleRow.id,
+    name: zelleRow.name,
+    bank: zelleRow.bank,
+    balanceUsd: zelleRow.balanceUsd,
+    isActive: zelleRow.isActive,
+    createdAt: zelleRow.createdAt,
+  };
+}
+
+function mapSimpleUpdate(
+  tableName: Extract<UndoPayload, { table: "externalDebt" | "account" | "category" | "project" | "wireItem" | "zelleAccount" }>["table"],
+  row: ExternalDebtRow | AccountRow | CategoryRow | ProjectRow | WireItemRow | ZelleRow,
+) {
+  const mapped = mapSimpleRow(tableName, row);
+  const { id: _id, createdAt: _createdAt, ...updatable } = mapped;
+  return updatable;
+}
+
+function mapRemeseroInsert(row: typeof remesero.$inferSelect) {
+  return {
+    id: row.id,
+    name: row.name,
+    notes: row.notes,
+    isActive: row.isActive,
+    createdAt: row.createdAt,
+  };
+}
+
+function mapRemeseroUpdate(row: typeof remesero.$inferSelect) {
+  return {
+    name: row.name,
+    notes: row.notes,
+    isActive: row.isActive,
+  };
+}
+
+function mapRemeseroBalance(row: typeof remeseroBalance.$inferSelect) {
+  return {
+    remeseroId: row.remeseroId,
+    balanceCup: row.balanceCup,
+    balanceUsd: row.balanceUsd,
+    lastCuadreAt: row.lastCuadreAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapRemeseroBalanceUpdate(row: typeof remeseroBalance.$inferSelect) {
+  return {
+    balanceCup: row.balanceCup,
+    balanceUsd: row.balanceUsd,
+    lastCuadreAt: row.lastCuadreAt,
+    updatedAt: row.updatedAt,
+  };
 }

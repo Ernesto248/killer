@@ -147,7 +147,7 @@ function mapSimpleRow(
       direction: debt.direction,
       notes: debt.notes,
       isActive: debt.isActive,
-      createdAt: debt.createdAt,
+      createdAt: asDate(debt.createdAt),
     };
   }
   if (tableName === "account") {
@@ -160,7 +160,7 @@ function mapSimpleRow(
       bank: accountRow.bank,
       balanceManual: accountRow.balanceManual,
       isActive: accountRow.isActive,
-      createdAt: accountRow.createdAt,
+      createdAt: asDate(accountRow.createdAt),
     };
   }
   if (tableName === "category") {
@@ -169,7 +169,7 @@ function mapSimpleRow(
       id: categoryRow.id,
       name: categoryRow.name,
       isActive: categoryRow.isActive,
-      createdAt: categoryRow.createdAt,
+      createdAt: asDate(categoryRow.createdAt),
     };
   }
   if (tableName === "project") {
@@ -182,7 +182,7 @@ function mapSimpleRow(
       direction: projectRow.direction,
       notes: projectRow.notes,
       isActive: projectRow.isActive,
-      createdAt: projectRow.createdAt,
+      createdAt: asDate(projectRow.createdAt),
     };
   }
   if (tableName === "wireItem") {
@@ -195,7 +195,7 @@ function mapSimpleRow(
       direction: wireRow.direction,
       notes: wireRow.notes,
       isActive: wireRow.isActive,
-      createdAt: wireRow.createdAt,
+      createdAt: asDate(wireRow.createdAt),
     };
   }
   const zelleRow = row as ZelleRow;
@@ -205,7 +205,7 @@ function mapSimpleRow(
     bank: zelleRow.bank,
     balanceUsd: zelleRow.balanceUsd,
     isActive: zelleRow.isActive,
-    createdAt: zelleRow.createdAt,
+    createdAt: asDate(zelleRow.createdAt),
   };
 }
 
@@ -224,7 +224,7 @@ function mapRemeseroInsert(row: typeof remesero.$inferSelect) {
     name: row.name,
     notes: row.notes,
     isActive: row.isActive,
-    createdAt: row.createdAt,
+    createdAt: asDate(row.createdAt),
   };
 }
 
@@ -241,8 +241,8 @@ function mapRemeseroBalance(row: typeof remeseroBalance.$inferSelect) {
     remeseroId: row.remeseroId,
     balanceCup: row.balanceCup,
     balanceUsd: row.balanceUsd,
-    lastCuadreAt: row.lastCuadreAt,
-    updatedAt: row.updatedAt,
+    lastCuadreAt: asNullableDate(row.lastCuadreAt),
+    updatedAt: asDate(row.updatedAt),
   };
 }
 
@@ -250,7 +250,16 @@ function mapRemeseroBalanceUpdate(row: typeof remeseroBalance.$inferSelect) {
   return {
     balanceCup: row.balanceCup,
     balanceUsd: row.balanceUsd,
-    lastCuadreAt: row.lastCuadreAt,
-    updatedAt: row.updatedAt,
+    lastCuadreAt: asNullableDate(row.lastCuadreAt),
+    updatedAt: asDate(row.updatedAt),
   };
+}
+
+function asDate(value: Date | string) {
+  return value instanceof Date ? value : new Date(value);
+}
+
+function asNullableDate(value: Date | string | null) {
+  if (!value) return null;
+  return asDate(value);
 }

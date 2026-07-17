@@ -1,8 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronDown, ChevronUp, FileText, DollarSign } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, ChevronUp, DollarSign, Edit2, FileText, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { deleteRemeseroUsdMovementAction, updateRemeseroUsdMovementAction } from "@/server/actions/remesero";
 
 type Props = {
   remesero: { id: number; name: string };
@@ -13,9 +16,23 @@ type Props = {
 
 const COLLAPSED_COUNT = 3;
 
+function formatAmount(value: string) {
+  const digits = value.replace(/[^\d-]/g, "");
+  if (!digits || digits === "-") return digits;
+  return Number(digits).toLocaleString("es-ES", { useGrouping: true });
+}
+
+function parseAmount(value: string) {
+  return Number(value.replace(/[^\d-]/g, "")) || 0;
+}
+
 export function FichaClient({ remesero, balance, cuadres, usdMovs }: Props) {
   const [cuadresExpanded, setCuadresExpanded] = useState(false);
   const [usdExpanded, setUsdExpanded] = useState(false);
+  const [editingUsdId, setEditingUsdId] = useState<number | null>(null);
+  const [editUsdAmount, setEditUsdAmount] = useState("");
+  const [editUsdNote, setEditUsdNote] = useState("");
+  const [pending, start] = useTransition();
 
   const cup = Number(balance?.balanceCup ?? 0);
   const usd = Number(balance?.balanceUsd ?? 0);
@@ -73,13 +90,8 @@ export function FichaClient({ remesero, balance, cuadres, usdMovs }: Props) {
       </div>
 
       <section>
-        <button
-          onClick={() => setCuadresExpanded(!cuadresExpanded)}
-          className="flex items-center justify-between w-full text-left mb-3"
-        >
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Historial de cuadres ({cuadres.length})
-          </h3>
+        <button onClick={() => setCuadresExpanded(!cuadresExpanded)} className="flex items-center justify-between w-full text-left mb-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Historial de cuadres ({cuadres.length})</h3>
           {cuadres.length > COLLAPSED_COUNT && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               {cuadresExpanded ? "Contraer" : "Ver todos"}
@@ -104,20 +116,20 @@ export function FichaClient({ remesero, balance, cuadres, usdMovs }: Props) {
                 </thead>
                 <tbody>
                   {visibleCuadres.map((c) => {
-                    const d = c.balanceFinalLabel === "deuda";
-                    const f = c.balanceFinalLabel === "fondo";
+                    const deuda = c.balanceFinalLabel === "deuda";
+                    const fondo = c.balanceFinalLabel === "fondo";
                     return (
                       <tr key={c.id} className="border-b border-black/5 hover:bg-accent/40 transition-colors">
                         <td className="px-4 py-2.5 whitespace-nowrap">{c.date.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit" })}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums">{Number(c.balanceInicialCup).toLocaleString()}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums">{Number(c.pagadoCup).toLocaleString()}</td>
-                        <td className={cn("px-4 py-2.5 text-right tabular-nums font-semibold", d ? "text-red-600" : f ? "text-green-600" : "")}>
+                        <td className={cn("px-4 py-2.5 text-right tabular-nums font-semibold", deuda ? "text-red-600" : fondo ? "text-green-600" : "")}>
                           {Number(c.balanceFinalCup).toLocaleString()}
                         </td>
                         <td className="px-4 py-2.5">
-                          {d && <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">Deuda</span>}
-                          {f && <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">Fondo</span>}
-                          {!d && !f && "—"}
+                          {deuda && <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">Deuda</span>}
+                          {fondo && <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">Fondo</span>}
+                          {!deuda && !fondo && "-"}
                         </td>
                       </tr>
                     );
@@ -130,13 +142,8 @@ export function FichaClient({ remesero, balance, cuadres, usdMovs }: Props) {
       </section>
 
       <section>
-        <button
-          onClick={() => setUsdExpanded(!usdExpanded)}
-          className="flex items-center justify-between w-full text-left mb-3"
-        >
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Movimientos USD ({usdMovs.length})
-          </h3>
+        <button onClick={() => setUsdExpanded(!usdExpanded)} className="flex items-center justify-between w-full text-left mb-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Movimientos USD ({usdMovs.length})</h3>
           {usdMovs.length > COLLAPSED_COUNT && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               {usdExpanded ? "Contraer" : "Ver todos"}
@@ -155,18 +162,64 @@ export function FichaClient({ remesero, balance, cuadres, usdMovs }: Props) {
                     <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs">Fecha</th>
                     <th className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs">Monto</th>
                     <th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs">Nota</th>
+                    <th className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleUsd.map((m) => {
                     const amt = Number(m.amount);
+                    const editing = editingUsdId === m.id;
                     return (
                       <tr key={m.id} className="border-b border-black/5 hover:bg-accent/40 transition-colors">
                         <td className="px-4 py-2.5 whitespace-nowrap">{m.date.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit" })}</td>
-                        <td className={cn("px-4 py-2.5 text-right tabular-nums font-semibold", amt > 0 ? "text-red-600" : amt < 0 ? "text-green-600" : "")}>
-                          {amt.toLocaleString()}
+                        <td className="px-4 py-2.5 text-right tabular-nums">
+                          {editing ? (
+                            <Input
+                              value={editUsdAmount}
+                              onChange={(e) => setEditUsdAmount(formatAmount(e.target.value))}
+                              className="h-8 text-sm text-right"
+                              inputMode="numeric"
+                            />
+                          ) : (
+                            <span className={cn("font-semibold", amt > 0 ? "text-red-600" : amt < 0 ? "text-green-600" : "")}>
+                              {amt.toLocaleString()}
+                            </span>
+                          )}
                         </td>
-                        <td className="px-4 py-2.5 text-muted-foreground max-w-[180px] truncate">{m.note ?? "—"}</td>
+                        <td className="px-4 py-2.5 text-muted-foreground max-w-[180px]">
+                          {editing ? (
+                            <Input value={editUsdNote} onChange={(e) => setEditUsdNote(e.target.value)} className="h-8 text-sm" />
+                          ) : (
+                            <span className="truncate block">{m.note ?? "-"}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          {editing ? (
+                            <div className="flex justify-end gap-1">
+                              <Button size="sm" variant="ghost" onClick={() => setEditingUsdId(null)}><X className="h-4 w-4" /></Button>
+                              <Button size="sm" disabled={pending} onClick={() => start(async () => {
+                                await updateRemeseroUsdMovementAction({
+                                  id: m.id,
+                                  date: m.date,
+                                  amount: parseAmount(editUsdAmount),
+                                  note: editUsdNote || undefined,
+                                });
+                                setEditingUsdId(null);
+                              })}><Check className="h-4 w-4" /></Button>
+                            </div>
+                          ) : (
+                            <div className="flex justify-end gap-1">
+                              <Button size="sm" variant="ghost" onClick={() => {
+                                setEditingUsdId(m.id);
+                                setEditUsdAmount(Number(m.amount).toLocaleString("es-ES", { useGrouping: true }));
+                                setEditUsdNote(m.note ?? "");
+                              }}><Edit2 className="h-4 w-4" /></Button>
+                              <Button size="sm" variant="ghost" className="text-red-600" disabled={pending} onClick={() => start(async () => {
+                                await deleteRemeseroUsdMovementAction(m.id);
+                              })}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}

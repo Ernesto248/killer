@@ -163,9 +163,11 @@ export function RemeserosTable({ rows }: { rows: RemeseroRow[] }) {
                             <DialogTrigger render={<Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-red-600">Eliminar</Button>} />
                             <DialogContent>
                               <DialogHeader><DialogTitle>Eliminar permanentemente</DialogTitle></DialogHeader>
-                              <p className="text-sm text-muted-foreground">
-                                Se eliminara permanentemente a {r.name}. Solo se permite si no tiene cuadres ni movimientos USD; si procede, podras deshacerlo desde la barra superior.
-                              </p>
+                              <div className="space-y-3 text-sm text-muted-foreground">
+                                <p>Vas a eliminar permanentemente a <span className="font-medium text-foreground">{r.name}</span>.</p>
+                                <p>Esto tambien borra todos sus cuadres, tiradas, movimientos USD y balances relacionados.</p>
+                                <p className="font-medium text-red-600">Esta accion no se puede deshacer.</p>
+                              </div>
                               <DialogFooter>
                                 <Button variant="outline" size="sm" onClick={() => setDeleteOpen(null)}>Cancelar</Button>
                                 <Button variant="destructive" size="sm" disabled={pending} onClick={() => start(async () => {
